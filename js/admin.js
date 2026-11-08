@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderServicesList();
     renderClientAccounts();
     renderCommissionerRegistrations();
+    loadPaymentQrCode();
     updateBadges();
 });
 
@@ -699,6 +700,10 @@ function openAddCommissionModal() {
     }
 
     document.getElementById('comm-client').value = '';
+    const agreedInput = document.getElementById('comm-agreed-price');
+    if (agreedInput) agreedInput.value = '';
+    const amtInput = document.getElementById('comm-amount-paid');
+    if (amtInput) amtInput.value = '';
     const accInput = document.getElementById('comm-contact-account');
     if (accInput) accInput.value = '';
     const chSelect = document.getElementById('comm-contact-channel');
@@ -734,28 +739,72 @@ function handleSaveCommission(event) {
         paymentMethod = customTyped || 'Other';
     }
 
+    const agreedPrice = parseFloat(document.getElementById('comm-agreed-price')?.value) || 0;
+    const amountPaid = parseFloat(document.getElementById('comm-amount-paid')?.value) || 0;
+    const balanceDue = Math.max(0, agreedPrice - amountPaid);
+    const payType = document.getElementById('comm-payment-type')?.value || (amountPaid >= agreedPrice && agreedPrice > 0 ? 'fully_paid' : 'downpayment');
+
     const newSub = {
         id: newId,
-        name: document.getElementById('comm-client').value,
+        name: document.getElementById('comm-client').value.trim(),
         email: '',
         contact: fullContact,
-        service: document.getElementById('comm-service').value,
+        service: document.getElementById('comm-service').value.trim(),
         category: 'Custom Commission',
-        description: document.getElementById('comm-desc').value,
+        description: document.getElementById('comm-desc').value.trim(),
         deadline: document.getElementById('comm-deadline').value,
+        agreedPrice: agreedPrice,
+        amountPaid: amountPaid,
+        balance: balanceDue,
         payment: paymentMethod,
-        paymentType: document.getElementById('comm-payment-type')?.value || 'downpayment',
+        paymentType: payType,
         downpaymentReceipt: tempCommissionReceipt,
         notes: '',
-        status: document.getElementById('comm-status').value,
+        status: document.getElementById('comm-status').value || 'Accepted',
         submittedAt: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
     };
 
     list.unshift(newSub);
     Storage.set(Storage.KEYS.SUBMISSIONS, list);
+
+    // If payment amount was entered by admin, also record in payments
+    if (amountPaid > 0) {
+        const payList = Storage.get(Storage.KEYS.PAYMENTS, []);
+        payList.unshift({
+            id: 'PAY-' + Date.now(),
+            clientName: newSub.name,
+            service: newSub.service,
+            amount: amountPaid,
+            agreedPrice: agreedPrice,
+            balance: balanceDue,
+            mode: paymentMethod,
+            paymentType: payType,
+            status: 'Accepted',
+            date: new Date().toISOString().slice(0, 10),
+            receipt: tempCommissionReceipt,
+            notes: `Admin recorded commission ${newId}`,
+            commId: newId,
+            aiVerified: true
+        });
+        Storage.set(Storage.KEYS.PAYMENTS, payList);
+    }
+
     closeModal('modal-edit-commission');
-    showToast(`Commission ${newId} created!`);
+    showToast(`Commission ${newId} created for ${newSub.name}!`);
     renderSubmissions();
+    renderPaymentsTracker();
+}
+
+function handleAdminCommPriceChange() {
+    const agreed = parseFloat(document.getElementById('comm-agreed-price')?.value) || 0;
+    const paid = parseFloat(document.getElementById('comm-amount-paid')?.value) || 0;
+    const ptSelect = document.getElementById('comm-payment-type');
+    if (!ptSelect) return;
+    if (agreed > 0 && paid >= agreed) {
+        ptSelect.value = 'fully_paid';
+    } else {
+        ptSelect.value = 'downpayment';
+    }
 }
 
 // ============================================
@@ -2912,11 +2961,66 @@ function exportPaymentsToCSV() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Thalie_Payment_Ledger_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `Payment_Ledger_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     showToast('Payment sheet exported to CSV successfully!');
+}
+
+// ============================================
+// PAYMENT QR CODE MANAGEMENT
+// ============================================
+
+function loadPaymentQrCode() {
+    const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, {}) || {};
+    const img = document.getElementById('payment-qr-img');
+    const emptyText = document.getElementById('payment-qr-empty-text');
+    const btnRemove = document.getElementById('btn-remove-qr');
+    if (settings.paymentQrCode) {
+        if (img) {
+            img.src = settings.paymentQrCode;
+            img.style.display = 'block';
+        }
+        if (emptyText) emptyText.style.display = 'none';
+        if (btnRemove) btnRemove.style.display = 'inline-block';
+    } else {
+        if (img) {
+            img.src = '';
+            img.style.display = 'none';
+        }
+        if (emptyText) emptyText.style.display = 'block';
+        if (btnRemove) btnRemove.style.display = 'none';
+    }
+}
+
+function handlePaymentQrUpload(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+        showToast('Please upload a valid image file.');
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, {}) || {};
+        settings.paymentQrCode = e.target.result;
+        Storage.set(Storage.KEYS.SITE_SETTINGS, settings);
+        loadPaymentQrCode();
+        showToast('Payment QR Code uploaded and saved!');
+    };
+    reader.readAsDataURL(file);
+}
+
+function handleRemovePaymentQr() {
+    if (!confirm('Remove your payment QR code? Accepted clients will no longer see it.')) return;
+    const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, {}) || {};
+    delete settings.paymentQrCode;
+    Storage.set(Storage.KEYS.SITE_SETTINGS, settings);
+    loadPaymentQrCode();
+    const input = document.getElementById('payment-qr-file-input');
+    if (input) input.value = '';
+    showToast('Payment QR code removed.');
 }
 
 

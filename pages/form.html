@@ -68,9 +68,26 @@
 
                 <!-- 1. COMMISSION REQUEST FORM (PROJECT DETAILS ONLY) -->
                 <form id="client-comm-form" onsubmit="handleCommissionSubmit(event)">
-                    <h2 style="font-family:'Special Elite', monospace; font-size:20px; color:var(--maroon-dark); margin:0 0 18px; text-transform:uppercase; letter-spacing:1px; text-align:center;">
+                    <h2 style="font-family:'Special Elite', monospace; font-size:20px; color:var(--maroon-dark); margin:0 0 14px; text-transform:uppercase; letter-spacing:1px; text-align:center;">
                         Project Details
                     </h2>
+
+                    <!-- Search Existing Commission (Admin submitted or previous draft) -->
+                    <div style="background: #fff8f5; border: 1px dashed var(--rose); padding: 14px 16px; border-radius: 6px; margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-family:'Special Elite', monospace; font-size:12px; color:var(--maroon-dark); text-transform:uppercase; letter-spacing:0.5px; font-weight:bold;">
+                                🔍 Search Existing or Admin-Submitted Commission
+                            </span>
+                            <button type="button" onclick="clearCommissionSearch()" id="clear-search-btn" style="display:none; font-size:11px; color:#b02a37; background:none; border:none; text-decoration:underline; cursor:pointer; font-weight:600;">Reset / Create New</button>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="comm-search-input" placeholder="Type your client name or COM-ID..." style="flex: 1; padding: 9px 12px; font-size: 13px; border: 1px solid #d4c4b0; border-radius: 4px; background:#fff;">
+                            <button type="button" class="btn-action btn-primary" onclick="searchExistingCommission()" style="padding: 9px 16px; font-size: 12px; white-space:nowrap;">Search &amp; Load</button>
+                        </div>
+                        <div id="comm-search-status" style="display:none; margin-top: 10px; font-size: 12px; padding: 10px 12px; border-radius: 4px; font-family:'Special Elite', monospace;"></div>
+                    </div>
+
+                    <input type="hidden" id="editing-comm-id" value="">
 
                     <div class="form-group">
                         <label for="name">Client Name</label>
@@ -128,7 +145,7 @@
                         <input type="date" id="deadline" name="deadline">
                     </div>
 
-                    <button type="submit" class="submit-btn" style="margin-top: 20px;">Request a Commission</button>
+                    <button type="submit" id="comm-submit-btn" class="submit-btn" style="margin-top: 20px;">Request a Commission</button>
                 </form>
 
                 <!-- 2. PAYMENT FORM (DEDICATED PAYMENT SUBMISSION WITH DOWNPAYMENT & FULLY PAID) -->
@@ -136,73 +153,106 @@
                     <h2 style="font-family:'Special Elite', monospace; font-size:20px; color:var(--maroon-dark); margin:0 0 6px; text-transform:uppercase; letter-spacing:1px; text-align:center;">
                         Submit Payment
                     </h2>
-                    <p style="text-align:center; font-size:12.5px; color:#7a5048; margin:0 0 20px;">
-                        Upload proof of payment for your commission request or existing project.
+                    <p style="text-align:center; font-size:12.5px; color:#7a5048; margin:0 0 18px;">
+                        Enter your client name to verify your approved commission and access payment details.
                     </p>
 
-                    <!-- Client Name -->
+                    <!-- Client Name Verification -->
                     <div class="form-group">
-                        <label for="payment-client-name">Client Name</label>
-                        <input id="payment-client-name" type="text" required placeholder="Enter the client name used for your commission">
+                        <label for="payment-client-name">Client Name (Must be an Approved Commission)</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input id="payment-client-name" type="text" required placeholder="Type your client name to check approved status..." oninput="handleClientNameInput(this.value)" style="flex: 1;">
+                            <button type="button" class="btn-action btn-primary" onclick="verifyPaymentClient(true)" style="padding: 9px 16px; font-size: 12px; white-space:nowrap;">Check Status</button>
+                        </div>
+                        <div id="payment-client-status-box" style="display: none; margin-top: 10px; padding: 12px 14px; border-radius: 6px; font-size: 12.5px; font-family:'Special Elite', monospace;"></div>
                     </div>
 
-                    <!-- Payment Option: Default is Downpayment, with Fully Paid option -->
-                    <div class="form-group" style="margin-bottom: 18px;">
-                        <label style="font-weight: 700; margin-bottom: 8px; display: block; font-family:'Special Elite', monospace; font-size:12.5px; text-transform:uppercase; color:var(--maroon-dark);">
-                            Payment Option:
-                        </label>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                            <label id="payment-stage-dp-lbl" style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 2px solid var(--maroon); border-radius: 6px; background: #fff8f5; cursor: pointer; transition: all 0.2s;">
-                                <input type="radio" name="payment-option-type" id="pay-opt-dp" value="downpayment" checked onchange="handlePaymentOptionChange('downpayment')">
-                                <div>
-                                    <strong style="display: block; font-family: 'Special Elite', monospace; color: var(--maroon-dark); font-size: 13px;">Downpayment</strong>
-                                    <span style="font-size: 11px; color: #7a5048;">50% Initial deposit to start work</span>
-                                </div>
-                            </label>
-                            <label id="payment-stage-full-lbl" style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px dashed #d4c4b0; border-radius: 6px; background: #ffffff; cursor: pointer; transition: all 0.2s;">
-                                <input type="radio" name="payment-option-type" id="pay-opt-full" value="fully_paid" onchange="handlePaymentOptionChange('fully_paid')">
-                                <div>
-                                    <strong style="display: block; font-family: 'Special Elite', monospace; color: var(--maroon-dark); font-size: 13px;">Fully Paid</strong>
-                                    <span style="font-size: 11px; color: #7a5048;">100% Full project payment</span>
-                                </div>
-                            </label>
+                    <!-- Admin Payment QR Code Section (Only appears when accepted) -->
+                    <div id="admin-payment-qr-wrap" style="display: none; background: #ffffff; border: 2px solid var(--maroon); border-radius: 6px; padding: 18px; margin: 18px 0; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.06);">
+                        <div style="font-family:'Special Elite', monospace; font-size: 14.5px; color: var(--maroon-dark); font-weight: bold; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px;">
+                            📱 Scan Admin QR Code to Pay
+                        </div>
+                        <p style="font-size: 12px; color: #7a5048; margin: 0 0 14px;">
+                            Scan this QR code using your GCash, Maya, or Bank app. After payment, upload your receipt screenshot below!
+                        </p>
+                        <div style="display: inline-block; background: #fff; padding: 8px; border: 1px dashed var(--rose); border-radius: 6px;">
+                            <img id="admin-payment-qr-img" src="" alt="Admin Payment QR Code" style="max-height: 220px; max-width: 100%; border-radius: 4px; display: block;">
                         </div>
                     </div>
 
-                    <!-- Amount Paid & Mode of Payment -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                        <div class="form-group">
-                            <label for="payment-amount" id="payment-amount-label">Amount Paid in Screenshot (₱)</label>
-                            <input type="number" id="payment-amount" name="payment-amount" min="0" step="any" placeholder="e.g. 500" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="payment-mode-select">Mode of Payment</label>
-                            <select id="payment-mode-select" name="payment-mode-select" onchange="togglePaymentProofOther(this.value)">
-                                <option value="GCash" selected>GCash</option>
-                                <option value="Maya">Maya</option>
-                                <option value="PayPal">PayPal</option>
-                                <option value="Maribank">Maribank</option>
-                                <option value="Other">Other (specify)</option>
-                            </select>
-                            <input type="text" id="payment-proof-other-input" placeholder="Type payment method (e.g. BDO, BPI)" style="display:none; margin-top:8px;">
-                        </div>
-                    </div>
-
-                    <!-- Upload Screenshot -->
-                    <div class="gcash-payment-card" style="background: #ffffff; border: 2px dashed #007dfe; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label for="payment-receipt-file" style="color: #0056b3; font-weight: 700; font-family: 'Special Elite', monospace; font-size: 13px; display: block; margin-bottom: 8px;">
-                                Upload Payment Screenshot Proof
+                    <!-- Payment Details (Only active when accepted) -->
+                    <div id="payment-inputs-container" style="opacity: 0.5; pointer-events: none; transition: opacity 0.3s ease;">
+                        
+                        <!-- Payment Option: Default is Downpayment, with Fully Paid option -->
+                        <div class="form-group" style="margin-bottom: 18px;">
+                            <label style="font-weight: 700; margin-bottom: 8px; display: block; font-family:'Special Elite', monospace; font-size:12.5px; text-transform:uppercase; color:var(--maroon-dark);">
+                                Payment Option:
                             </label>
-                            <input type="file" id="payment-receipt-file" accept="image/*" onchange="previewPaymentProofFile(event)" required style="background: white; border-color: #90caf9;">
-                            <div id="payment-proof-preview-wrap" style="display: none; margin-top: 10px; text-align: center; background: #f0f7ff; padding: 10px; border-radius: 4px; border: 1px solid #bce0fd;">
-                                <img id="payment-proof-preview-img" src="" alt="Payment Proof" style="max-height: 170px; max-width: 100%; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                                <div style="font-size: 11px; color: #28a745; margin-top: 4px; font-weight: 600; font-family:'Special Elite', monospace;">Screenshot Attached</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <label id="payment-stage-dp-lbl" style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 2px solid var(--maroon); border-radius: 6px; background: #fff8f5; cursor: pointer; transition: all 0.2s;">
+                                    <input type="radio" name="payment-option-type" id="pay-opt-dp" value="downpayment" checked onchange="handlePaymentOptionChange('downpayment')">
+                                    <div>
+                                        <strong style="display: block; font-family: 'Special Elite', monospace; color: var(--maroon-dark); font-size: 13px;">Downpayment</strong>
+                                        <span id="dp-subtitle-hint" style="font-size: 11px; color: #7a5048;">50% Initial deposit to start work</span>
+                                    </div>
+                                </label>
+                                <label id="payment-stage-full-lbl" style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px dashed #d4c4b0; border-radius: 6px; background: #ffffff; cursor: pointer; transition: all 0.2s;">
+                                    <input type="radio" name="payment-option-type" id="pay-opt-full" value="fully_paid" onchange="handlePaymentOptionChange('fully_paid')">
+                                    <div>
+                                        <strong style="display: block; font-family: 'Special Elite', monospace; color: var(--maroon-dark); font-size: 13px;">Fully Paid</strong>
+                                        <span id="full-subtitle-hint" style="font-size: 11px; color: #7a5048;">100% Full project payment</span>
+                                    </div>
+                                </label>
                             </div>
                         </div>
+
+                        <!-- Amount Paid & Mode of Payment -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <div class="form-group">
+                                <label for="payment-amount" id="payment-amount-label">Amount Paid in Screenshot (₱)</label>
+                                <input type="number" id="payment-amount" name="payment-amount" min="0" step="any" placeholder="e.g. 500" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="payment-mode-select">Mode of Payment</label>
+                                <select id="payment-mode-select" name="payment-mode-select" onchange="togglePaymentProofOther(this.value)">
+                                    <option value="GCash" selected>GCash</option>
+                                    <option value="Maya">Maya</option>
+                                    <option value="PayPal">PayPal</option>
+                                    <option value="Maribank">Maribank</option>
+                                    <option value="Other">Other (specify)</option>
+                                </select>
+                                <input type="text" id="payment-proof-other-input" placeholder="Type payment method (e.g. BDO, BPI)" style="display:none; margin-top:8px;">
+                            </div>
+                        </div>
+
+                        <!-- Upload Screenshot & AI Receipt Scanner -->
+                        <div class="gcash-payment-card" style="background: #ffffff; border: 2px dashed #007dfe; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <label for="payment-receipt-file" style="color: #0056b3; font-weight: 700; font-family: 'Special Elite', monospace; font-size: 13px; margin: 0;">
+                                        Upload Payment Screenshot Proof
+                                    </label>
+                                    <span style="font-size: 11px; background: #e8f4fd; color: #0056b3; padding: 2px 8px; border-radius: 10px; font-weight: 600; font-family:'Special Elite', monospace;">
+                                        AI / Gemini Scanner Active
+                                    </span>
+                                </div>
+                                
+                                <input type="file" id="payment-receipt-file" accept="image/*" onchange="handlePaymentScreenshotUpload(event)" required style="background: white; border-color: #90caf9;">
+                                
+                                <!-- AI Scanner Status Banner -->
+                                <div id="ai-scanner-status" style="display: none; margin-top: 10px; padding: 10px 14px; border-radius: 4px; font-size: 12px; font-family:'Special Elite', monospace;"></div>
+
+                                <!-- Receipt Preview Box -->
+                                <div id="payment-proof-preview-wrap" style="display: none; margin-top: 10px; text-align: center; background: #f0f7ff; padding: 10px; border-radius: 4px; border: 1px solid #bce0fd;">
+                                    <img id="payment-proof-preview-img" src="" alt="Payment Proof" style="max-height: 180px; max-width: 100%; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                    <div style="font-size: 11px; color: #28a745; margin-top: 4px; font-weight: 600; font-family:'Special Elite', monospace;">Screenshot Attached</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="payment-submit-btn" class="submit-btn">Submit Payment</button>
                     </div>
 
-                    <button type="submit" class="submit-btn">Submit Payment</button>
                     <p id="payment-proof-success-msg" role="status" style="display:none; margin:16px 0 0; padding:12px; background:#e8f5e9; color:#2e7d32; border-radius:4px; text-align:center; font-family:'Special Elite', monospace; font-size:13px;"></p>
                 </form>
 
@@ -237,6 +287,8 @@
         let uploadedCommissionFiles = [];
         let tempPaymentProofBase64 = '';
         let lastCreatedClientName = '';
+        let currentApprovedCommission = null;
+        let clientCheckDebounceTimer = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             populateServiceDropdown();
@@ -245,7 +297,9 @@
             }
         });
 
+        // ============================================
         // 1. SWITCH BETWEEN COMMISSION FORM & PAYMENT FORM
+        // ============================================
         function switchFormTab(tab) {
             const reqBtn = document.getElementById('tab-btn-request');
             const payBtn = document.getElementById('tab-btn-payment');
@@ -275,6 +329,7 @@
                 if (clientInput) {
                     if (lastCreatedClientName && !clientInput.value) {
                         clientInput.value = lastCreatedClientName;
+                        verifyPaymentClient(true);
                     }
                     clientInput.focus();
                 }
@@ -295,11 +350,234 @@
             }
         }
 
-        // 2. PAYMENT OPTION TOGGLE (DOWNPAYMENT [DEFAULT] VS FULLY PAID)
+        // ============================================
+        // 2. SEARCH & EDIT EXISTING COMMISSION (TAB 1)
+        // ============================================
+        async function searchExistingCommission() {
+            const query = document.getElementById('comm-search-input')?.value.trim();
+            const statusEl = document.getElementById('comm-search-status');
+            const clearBtn = document.getElementById('clear-search-btn');
+            if (!query) {
+                alert('Please type a Client Name or Commission ID to search.');
+                return;
+            }
+
+            if (statusEl) {
+                statusEl.style.display = 'block';
+                statusEl.style.background = '#f5f5f5';
+                statusEl.style.color = '#555';
+                statusEl.innerHTML = 'Searching commissions...';
+            }
+
+            try {
+                const results = await Storage.searchCommissions(query);
+                if (!results || results.length === 0) {
+                    if (statusEl) {
+                        statusEl.style.background = '#fff3cd';
+                        statusEl.style.color = '#856404';
+                        statusEl.innerHTML = `No existing commission found for <strong>"${escapeHtml(query)}"</strong>. You can fill out the form below to create a new one!`;
+                    }
+                    return;
+                }
+
+                // Pick best match (exact or first match)
+                const comm = results[0];
+                document.getElementById('name').value = comm.name || '';
+                document.getElementById('email').value = comm.email || '';
+                
+                // Contact channel
+                if (comm.contact && comm.contact.includes(':')) {
+                    const parts = comm.contact.split(':');
+                    const ch = parts[0].trim();
+                    const acc = parts.slice(1).join(':').trim();
+                    const chSelect = document.getElementById('contact-channel');
+                    if (chSelect) chSelect.value = ch;
+                    document.getElementById('contact-account').value = acc;
+                } else if (comm.contact) {
+                    document.getElementById('contact-account').value = comm.contact;
+                }
+
+                const svcSelect = document.getElementById('service');
+                if (svcSelect) svcSelect.value = comm.service || '';
+                document.getElementById('description').value = comm.description || '';
+                document.getElementById('deadline').value = comm.deadline || '';
+                document.getElementById('editing-comm-id').value = comm.id || '';
+
+                const submitBtn = document.getElementById('comm-submit-btn');
+                if (submitBtn) submitBtn.textContent = `Update Commission Details (${comm.id})`;
+
+                if (clearBtn) clearBtn.style.display = 'inline-block';
+
+                if (statusEl) {
+                    statusEl.style.background = '#e8f5e9';
+                    statusEl.style.color = '#2e7d32';
+                    statusEl.innerHTML = `✅ Found commission <strong>${escapeHtml(comm.id)}</strong> for <strong>${escapeHtml(comm.name)}</strong> (Status: <strong>${escapeHtml(comm.status)}</strong>). Details loaded! You can modify fields and save.`;
+                }
+            } catch (err) {
+                if (statusEl) {
+                    statusEl.style.background = '#f8d7da';
+                    statusEl.style.color = '#721c24';
+                    statusEl.textContent = 'Search failed: ' + err.message;
+                }
+            }
+        }
+
+        function clearCommissionSearch() {
+            document.getElementById('client-comm-form').reset();
+            document.getElementById('editing-comm-id').value = '';
+            document.getElementById('comm-search-input').value = '';
+            const statusEl = document.getElementById('comm-search-status');
+            if (statusEl) statusEl.style.display = 'none';
+            const clearBtn = document.getElementById('clear-search-btn');
+            if (clearBtn) clearBtn.style.display = 'none';
+            const submitBtn = document.getElementById('comm-submit-btn');
+            if (submitBtn) submitBtn.textContent = 'Request a Commission';
+        }
+
+        // ============================================
+        // 3. SUBMIT PAYMENT: NAME VERIFICATION & QR CODE (TAB 2)
+        // ============================================
+        function handleClientNameInput(val) {
+            clearTimeout(clientCheckDebounceTimer);
+            clientCheckDebounceTimer = setTimeout(() => {
+                if (val.trim().length >= 3) {
+                    verifyPaymentClient(false);
+                } else {
+                    resetPaymentClientState();
+                }
+            }, 600);
+        }
+
+        async function verifyPaymentClient(isManualClick = false) {
+            const clientName = document.getElementById('payment-client-name')?.value.trim();
+            const box = document.getElementById('payment-client-status-box');
+            const inputsContainer = document.getElementById('payment-inputs-container');
+            const qrWrap = document.getElementById('admin-payment-qr-wrap');
+            const qrImg = document.getElementById('admin-payment-qr-img');
+
+            if (!clientName) {
+                if (isManualClick) alert('Please type your client name to verify your commission.');
+                return;
+            }
+
+            if (box) {
+                box.style.display = 'block';
+                box.style.background = '#f5f5f5';
+                box.style.color = '#555';
+                box.innerHTML = 'Verifying commission status...';
+            }
+
+            try {
+                const results = await Storage.searchCommissions(clientName);
+                if (!results || results.length === 0) {
+                    resetPaymentClientState();
+                    if (box) {
+                        box.style.display = 'block';
+                        box.style.background = '#fff3cd';
+                        box.style.color = '#856404';
+                        box.innerHTML = `⚠️ No commission found under <strong>"${escapeHtml(clientName)}"</strong>. Please make sure you requested a commission first.`;
+                    }
+                    return;
+                }
+
+                // Match best candidate
+                const comm = results.find(c => c.name.toLowerCase() === clientName.toLowerCase()) || results[0];
+                const isAccepted = (comm.status === 'Accepted' || comm.status === 'In Progress' || comm.status === 'Done');
+
+                if (!isAccepted) {
+                    resetPaymentClientState();
+                    if (box) {
+                        box.style.display = 'block';
+                        box.style.background = '#fef3c7';
+                        box.style.color = '#92400e';
+                        box.style.border = '1px solid #fde68a';
+                        box.innerHTML = `
+                            <div style="font-weight: bold; margin-bottom: 4px;">⚠️ Commission Status: PENDING APPROVAL</div>
+                            <div>Your commission (<strong>${escapeHtml(comm.id)}</strong>) has been received and is currently waiting for admin review. <strong>Payment QR code and submission will unlock once accepted by the admin.</strong></div>
+                        `;
+                    }
+                    return;
+                }
+
+                // Accepted commission found!
+                currentApprovedCommission = comm;
+                const agreed = Number(comm.agreedPrice) || 0;
+                const paid = Number(comm.amountPaid) || 0;
+                const bal = Math.max(0, agreed - paid);
+
+                if (box) {
+                    box.style.display = 'block';
+                    box.style.background = '#ecfdf5';
+                    box.style.color = '#065f46';
+                    box.style.border = '1px solid #a7f3d0';
+                    box.innerHTML = `
+                        <div style="font-weight: bold; font-size: 13.5px; margin-bottom: 4px;">✅ Commission Approved!</div>
+                        <div>Client: <strong>${escapeHtml(comm.name)}</strong> (${escapeHtml(comm.id)}) &bull; Service: <strong>${escapeHtml(comm.service || 'Commission')}</strong></div>
+                        <div style="margin-top: 6px; font-size: 13px;">
+                            Agreed Price: <strong>₱${agreed.toLocaleString()}</strong> | Already Paid: ₱${paid.toLocaleString()} | Balance Due: <strong style="color:var(--maroon); font-size:14px;">₱${bal.toLocaleString()}</strong>
+                        </div>
+                    `;
+                }
+
+                // Show Admin QR Code if configured
+                const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, {}) || {};
+                if (settings.paymentQrCode && qrWrap && qrImg) {
+                    qrImg.src = settings.paymentQrCode;
+                    qrWrap.style.display = 'block';
+                } else if (qrWrap) {
+                    qrWrap.style.display = 'none';
+                }
+
+                // Update hints & default amount
+                const dpAmount = agreed > 0 ? (agreed * 0.5) : 500;
+                const dpHint = document.getElementById('dp-subtitle-hint');
+                if (dpHint) dpHint.textContent = `50% DP: ₱${dpAmount.toLocaleString()}`;
+                const fullHint = document.getElementById('full-subtitle-hint');
+                if (fullHint) fullHint.textContent = `100% Full: ₱${(bal > 0 ? bal : agreed).toLocaleString()}`;
+
+                const amountInput = document.getElementById('payment-amount');
+                if (amountInput && !amountInput.value) {
+                    const isFullChoice = document.getElementById('pay-opt-full')?.checked;
+                    amountInput.value = isFullChoice ? (bal > 0 ? bal : agreed) : dpAmount;
+                }
+
+                // Unlock payment details section
+                if (inputsContainer) {
+                    inputsContainer.style.opacity = '1';
+                    inputsContainer.style.pointerEvents = 'auto';
+                }
+            } catch (err) {
+                if (box) {
+                    box.style.display = 'block';
+                    box.style.background = '#f8d7da';
+                    box.style.color = '#721c24';
+                    box.textContent = 'Could not verify client: ' + err.message;
+                }
+            }
+        }
+
+        function resetPaymentClientState() {
+            currentApprovedCommission = null;
+            const box = document.getElementById('payment-client-status-box');
+            if (box) box.style.display = 'none';
+            const qrWrap = document.getElementById('admin-payment-qr-wrap');
+            if (qrWrap) qrWrap.style.display = 'none';
+            const inputsContainer = document.getElementById('payment-inputs-container');
+            if (inputsContainer) {
+                inputsContainer.style.opacity = '0.5';
+                inputsContainer.style.pointerEvents = 'none';
+            }
+        }
+
+        // ============================================
+        // 4. PAYMENT OPTION TOGGLE
+        // ============================================
         function handlePaymentOptionChange(opt) {
             const dpLbl = document.getElementById('payment-stage-dp-lbl');
             const fullLbl = document.getElementById('payment-stage-full-lbl');
-            const amountLabel = document.getElementById('payment-amount-label');
+            const amountInput = document.getElementById('payment-amount');
+            const agreed = currentApprovedCommission ? Number(currentApprovedCommission.agreedPrice) || 0 : 0;
+            const balance = currentApprovedCommission ? Number(currentApprovedCommission.balance) || 0 : 0;
 
             if (opt === 'fully_paid') {
                 if (fullLbl) {
@@ -310,7 +588,9 @@
                     dpLbl.style.border = '1px dashed #d4c4b0';
                     dpLbl.style.background = '#ffffff';
                 }
-                if (amountLabel) amountLabel.textContent = 'Full Payment Amount (₱)';
+                if (amountInput && agreed > 0) {
+                    amountInput.value = balance > 0 ? balance : agreed;
+                }
             } else {
                 if (dpLbl) {
                     dpLbl.style.border = '2px solid var(--maroon)';
@@ -320,7 +600,9 @@
                     fullLbl.style.border = '1px dashed #d4c4b0';
                     fullLbl.style.background = '#ffffff';
                 }
-                if (amountLabel) amountLabel.textContent = 'Downpayment Amount (₱) [50% DP]';
+                if (amountInput && agreed > 0) {
+                    amountInput.value = (agreed * 0.5);
+                }
             }
         }
 
@@ -332,22 +614,112 @@
             }
         }
 
-        function previewPaymentProofFile(event) {
+        // ============================================
+        // 5. AI / GEMINI RECEIPT SCANNER & CROSSCHECK
+        // ============================================
+        function handlePaymentScreenshotUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 tempPaymentProofBase64 = e.target.result;
                 const wrap = document.getElementById('payment-proof-preview-wrap');
                 const img = document.getElementById('payment-proof-preview-img');
                 if (img) img.src = tempPaymentProofBase64;
                 if (wrap) wrap.style.display = 'block';
+
+                // Trigger AI / Gemini Verification
+                await runAiReceiptVerification(tempPaymentProofBase64);
             };
             reader.readAsDataURL(file);
         }
 
-        // 3. SUBMIT PAYMENT PROOF
+        async function runAiReceiptVerification(base64Data) {
+            const statusEl = document.getElementById('ai-scanner-status');
+            const agreed = currentApprovedCommission ? Number(currentApprovedCommission.agreedPrice) || 0 : 0;
+            const currentStage = document.querySelector('input[name="payment-option-type"]:checked')?.value || 'downpayment';
+
+            if (statusEl) {
+                statusEl.style.display = 'block';
+                statusEl.style.background = '#e0f2fe';
+                statusEl.style.color = '#0369a1';
+                statusEl.style.border = '1px solid #bae6fd';
+                statusEl.innerHTML = '🤖 <strong>AI / Gemini Scanner:</strong> Analyzing receipt screenshot, extracting amount &amp; payment channel...';
+            }
+
+            try {
+                const res = await Storage.verifyReceipt(base64Data, {
+                    agreedPrice: agreed,
+                    paymentTypeHint: currentStage
+                });
+
+                if (res && res.ok) {
+                    const detectedAmount = Number(res.amount) || 0;
+                    const detectedMode = res.mode || 'GCash';
+                    const refNumber = res.refNumber || '';
+
+                    // Auto-fill payment mode if detected
+                    const modeSelect = document.getElementById('payment-mode-select');
+                    if (modeSelect) {
+                        const optExists = Array.from(modeSelect.options).some(o => o.value.toLowerCase() === detectedMode.toLowerCase());
+                        if (optExists) {
+                            modeSelect.value = detectedMode;
+                        } else {
+                            modeSelect.value = 'Other';
+                            const otherInput = document.getElementById('payment-proof-other-input');
+                            if (otherInput) {
+                                otherInput.value = detectedMode;
+                                otherInput.style.display = 'block';
+                            }
+                        }
+                    }
+
+                    // Auto-fill amount if detected
+                    if (detectedAmount > 0) {
+                        const amtInput = document.getElementById('payment-amount');
+                        if (amtInput) amtInput.value = detectedAmount;
+                    }
+
+                    // Crosscheck against agreed project price
+                    let crosscheckMsg = '';
+                    if (agreed > 0 && detectedAmount > 0) {
+                        if (detectedAmount >= agreed) {
+                            document.getElementById('pay-opt-full').checked = true;
+                            handlePaymentOptionChange('fully_paid');
+                            crosscheckMsg = `Amount <strong>₱${detectedAmount.toLocaleString()}</strong> completely settles the agreed fee of <strong>₱${agreed.toLocaleString()}</strong> (100% Fully Paid).`;
+                        } else {
+                            document.getElementById('pay-opt-dp').checked = true;
+                            handlePaymentOptionChange('downpayment');
+                            crosscheckMsg = `Amount <strong>₱${detectedAmount.toLocaleString()}</strong> satisfies the 50% deposit requirement on agreed fee of <strong>₱${agreed.toLocaleString()}</strong> (50% Downpayment).`;
+                        }
+                    } else {
+                        crosscheckMsg = `Detected <strong>₱${detectedAmount.toLocaleString()}</strong> via <strong>${escapeHtml(detectedMode)}</strong>.`;
+                    }
+
+                    if (statusEl) {
+                        statusEl.style.background = '#ecfdf5';
+                        statusEl.style.color = '#065f46';
+                        statusEl.style.border = '1px solid #a7f3d0';
+                        statusEl.innerHTML = `
+                            <div style="font-weight: bold; margin-bottom: 2px;">✅ AI Verified (${res.source === 'gemini' ? 'Gemini 1.5 Vision' : 'Smart OCR'}):</div>
+                            <div>${crosscheckMsg} ${refNumber ? `&bull; Ref: <strong>${escapeHtml(refNumber)}</strong>` : ''}</div>
+                        `;
+                    }
+                }
+            } catch (err) {
+                if (statusEl) {
+                    statusEl.style.background = '#fef3c7';
+                    statusEl.style.color = '#92400e';
+                    statusEl.style.border = '1px solid #fde68a';
+                    statusEl.innerHTML = `ℹ️ Receipt attached. Could not auto-detect fields (${escapeHtml(err.message)}). Please verify amount and mode manually below.`;
+                }
+            }
+        }
+
+        // ============================================
+        // 6. SUBMIT PAYMENT PROOF
+        // ============================================
         async function submitPaymentProofForm(event) {
             event.preventDefault();
             const client = document.getElementById('payment-client-name')?.value.trim();
@@ -361,7 +733,7 @@
             }
 
             if (!client) {
-                alert('Please enter your client name or commission ID.');
+                alert('Please enter your client name to verify your approved commission.');
                 return;
             }
             if (!tempPaymentProofBase64) {
@@ -375,13 +747,17 @@
                     receipt: tempPaymentProofBase64,
                     amount: amount,
                     paymentType: stage,
-                    mode: mode
+                    mode: mode,
+                    commId: currentApprovedCommission ? currentApprovedCommission.id : ''
                 });
 
                 document.getElementById('additional-payment-form').reset();
                 tempPaymentProofBase64 = '';
+                resetPaymentClientState();
                 const wrap = document.getElementById('payment-proof-preview-wrap');
                 if (wrap) wrap.style.display = 'none';
+                const aiStatus = document.getElementById('ai-scanner-status');
+                if (aiStatus) aiStatus.style.display = 'none';
 
                 const msg = document.getElementById('payment-proof-success-msg');
                 if (msg) {
@@ -393,7 +769,9 @@
             }
         }
 
-        // 4. POPULATE SERVICE DROPDOWN
+        // ============================================
+        // 7. POPULATE SERVICE DROPDOWN
+        // ============================================
         function populateServiceDropdown() {
             const select = document.getElementById('service');
             if (!select) return;
@@ -445,7 +823,9 @@
             }
         }
 
-        // 5. SUBMIT COMMISSION (PROJECT DETAILS ONLY)
+        // ============================================
+        // 8. SUBMIT COMMISSION (NEW OR EDIT EXISTING)
+        // ============================================
         async function handleCommissionSubmit(event) {
             event.preventDefault();
 
@@ -453,8 +833,9 @@
             const channel = document.getElementById('contact-channel')?.value || 'Contact';
             const account = document.getElementById('contact-account')?.value.trim() || '';
             const fullContact = account ? `${channel}: ${account}` : '';
+            const editingId = document.getElementById('editing-comm-id')?.value.trim();
 
-            const newComm = {
+            const commData = {
                 name: clientName,
                 email: document.getElementById('email').value.trim(),
                 contact: fullContact,
@@ -462,27 +843,39 @@
                 category: 'Client Request',
                 description: document.getElementById('description').value.trim(),
                 deadline: document.getElementById('deadline').value,
-                agreedPrice: 0,
-                amountPaid: 0,
-                balance: 0,
-                payment: '',
-                paymentType: 'downpayment',
-                downpaymentReceipt: '',
-                referenceFiles: uploadedCommissionFiles,
-                status: 'Accepted',
-                submittedAt: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                referenceFiles: uploadedCommissionFiles
             };
 
             try {
-                const saved = await Storage.submitCommission(newComm);
-                const newId = saved.id;
-                lastCreatedClientName = clientName;
+                if (editingId) {
+                    // Update existing commission
+                    await Storage.updateClientCommission(editingId, commData);
+                    alert(`Commission ${editingId} details updated successfully!`);
+                    lastCreatedClientName = clientName;
+                    clearCommissionSearch();
+                } else {
+                    // Create new commission
+                    const newComm = {
+                        ...commData,
+                        agreedPrice: 0,
+                        amountPaid: 0,
+                        balance: 0,
+                        payment: '',
+                        paymentType: 'downpayment',
+                        downpaymentReceipt: '',
+                        status: 'Pending',
+                        submittedAt: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                    };
+                    const saved = await Storage.submitCommission(newComm);
+                    const newId = saved.id;
+                    lastCreatedClientName = clientName;
 
-                document.getElementById('commission-form-card').style.display = 'none';
-                const successBox = document.getElementById('form-success-box');
-                document.getElementById('assigned-comm-id').textContent = newId;
-                document.getElementById('track-direct-link').href = `tracker.html?id=${newId}`;
-                successBox.style.display = 'block';
+                    document.getElementById('commission-form-card').style.display = 'none';
+                    const successBox = document.getElementById('form-success-box');
+                    document.getElementById('assigned-comm-id').textContent = newId;
+                    document.getElementById('track-direct-link').href = `tracker.html?id=${newId}`;
+                    successBox.style.display = 'block';
+                }
             } catch (error) {
                 alert(error.message || 'Could not send commission request. Please try again.');
             }
@@ -495,12 +888,14 @@
             const clientInput = document.getElementById('payment-client-name');
             if (clientInput && lastCreatedClientName) {
                 clientInput.value = lastCreatedClientName;
+                verifyPaymentClient(true);
             }
         }
 
         function resetCommissionForm() {
             document.getElementById('client-comm-form').reset();
             uploadedCommissionFiles = [];
+            document.getElementById('editing-comm-id').value = '';
             const filesPrev = document.getElementById('commission-files-preview');
             if (filesPrev) filesPrev.innerHTML = '';
             document.getElementById('commission-form-card').style.display = 'block';

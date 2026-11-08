@@ -105,6 +105,48 @@ const Storage = {
         return this.request('/api/submissions', { method: 'POST', body: JSON.stringify(data) });
     },
 
+    async searchCommissions(query) {
+        try {
+            const res = await this.request(`/api/client-commissions?q=${encodeURIComponent(query)}`);
+            if (res && Array.isArray(res.commissions)) return res.commissions;
+        } catch (e) {
+            console.warn('Remote search failed, falling back to local cache:', e.message);
+        }
+        const q = String(query || '').toLowerCase().trim();
+        const list = this.get(this.KEYS.SUBMISSIONS, []);
+        return list.filter(s => {
+            const nameMatch = String(s.name || '').toLowerCase().includes(q);
+            const idMatch = String(s.id || '').toLowerCase().includes(q);
+            return nameMatch || idMatch;
+        });
+    },
+
+    async updateClientCommission(id, data) {
+        try {
+            return await this.request('/api/client-commissions', {
+                method: 'PUT',
+                body: JSON.stringify({ id, ...data })
+            });
+        } catch (e) {
+            console.warn('Remote update failed, updating local cache:', e.message);
+            const list = this.get(this.KEYS.SUBMISSIONS, []);
+            const idx = list.findIndex(s => s.id === id);
+            if (idx !== -1) {
+                list[idx] = { ...list[idx], ...data, updatedAt: new Date().toISOString() };
+                this.set(this.KEYS.SUBMISSIONS, list);
+                return { ok: true, commission: list[idx] };
+            }
+            throw e;
+        }
+    },
+
+    async verifyReceipt(receiptBase64, extra = {}) {
+        return this.request('/api/verify-receipt', {
+            method: 'POST',
+            body: JSON.stringify({ receipt: receiptBase64, ...extra })
+        });
+    },
+
     async submitPaymentProof(data) {
         return this.request('/api/payment-proofs', { method: 'POST', body: JSON.stringify(data) });
     },
