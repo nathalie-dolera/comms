@@ -2129,7 +2129,12 @@ function renderPendingPaymentProofs() {
     container.innerHTML = proofs.map(proof => `
         <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-top:1px dashed #d4c4b0;flex-wrap:wrap;">
             <img src="${proof.receipt}" alt="Payment proof from ${escapeHtml(proof.clientName)}" style="width:92px;height:72px;object-fit:cover;border-radius:4px;border:1px solid #d4c4b0;">
-            <div style="flex:1;min-width:170px;"><strong>${escapeHtml(proof.clientName)}</strong><div style="font-size:11px;color:#8c5b52;">Submitted ${new Date(proof.submittedAt).toLocaleString()}</div></div>
+            <div style="flex:1;min-width:170px;">
+                <strong>${escapeHtml(proof.clientName)}</strong>
+                <span class="status-pill status-${proof.paymentType === 'fully_paid' ? 'done' : 'progress'}" style="margin-left: 6px; font-size: 10px;">${proof.paymentType === 'fully_paid' ? 'Fully Paid' : '50% DP'}</span>
+                ${proof.amount ? `<span style="font-weight:700; color:var(--maroon); margin-left:6px;">₱${Number(proof.amount).toLocaleString()}</span>` : ''}
+                <div style="font-size:11px;color:#8c5b52;">Submitted ${new Date(proof.submittedAt).toLocaleString()} via ${escapeHtml(proof.mode || 'GCash')}</div>
+            </div>
             <button type="button" class="btn-action btn-primary" onclick="recordPaymentFromProof('${proof.id}')">Record Payment</button>
             <button type="button" class="btn-action btn-danger" onclick="dismissPaymentProof('${proof.id}')">Dismiss</button>
         </div>`).join('');

@@ -12,7 +12,16 @@ module.exports = async (req, res) => {
       return send(res, 400, { error: 'Client name and a PNG, JPEG, or WebP screenshot are required.' });
     }
     if (receipt.length > 4_000_000) return send(res, 413, { error: 'Payment screenshot must be under 3 MB.' });
-    const row = { id: `PROOF-${crypto.randomBytes(9).toString('hex')}`, clientName, receipt, submittedAt: new Date().toISOString(), status: 'pending' };
+    const row = {
+      id: `PROOF-${crypto.randomBytes(9).toString('hex')}`,
+      clientName,
+      receipt,
+      amount: Number(input.amount) || 0,
+      paymentType: cleanString(input.paymentType || 'downpayment', 30),
+      mode: cleanString(input.mode || 'GCash', 50),
+      submittedAt: new Date().toISOString(),
+      status: 'pending'
+    };
     const db = await getDb();
     await db.collection('appData').updateOne(
       { key: 'thalie_payment_proofs' },
