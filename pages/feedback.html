@@ -433,27 +433,21 @@
             reader.readAsDataURL(file);
         }
 
-        function handleClientFeedbackSubmit(event) {
+        async function handleClientFeedbackSubmit(event) {
             event.preventDefault();
-            const list = Storage.get(Storage.KEYS.FEEDBACKS, []);
-
             const newReview = {
-                id: 'fb-' + Date.now(),
                 clientName: document.getElementById('c-fb-name').value,
                 project: document.getElementById('c-fb-project').value,
                 notes: document.getElementById('c-fb-notes').value,
-                date: new Date().toISOString().split('T')[0],
                 imageUrl: clientBase64Img
             };
-
-            list.unshift(newReview);
-            Storage.set(Storage.KEYS.FEEDBACKS, list);
-            if (clientBase64Img) {
-                Storage.set(Storage.KEYS.DEFAULT_FEEDBACK_IMAGE, clientBase64Img);
-            }
-            closeClientUploadModal();
-            renderFeedbacks();
-            alert('Thank you for submitting your feedback screenshot!');
+            try {
+                await Storage.submitFeedback(newReview);
+                await Storage.refresh();
+                closeClientUploadModal();
+                renderFeedbacks();
+                alert('Thank you for submitting your feedback screenshot!');
+            } catch (error) { alert(error.message || 'Could not submit feedback.'); }
         }
     </script>
 </body>

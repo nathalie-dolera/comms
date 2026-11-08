@@ -1,0 +1,10 @@
+{
+  "name": "comms-tracker-and-portfolio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Portfolio and commission tracker with a MongoDB-backed Vercel API",
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "mongodb": "^6.12.0"
+  }
+}

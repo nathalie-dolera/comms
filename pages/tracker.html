@@ -353,7 +353,7 @@
         <div class="search-card">
             <h2 style="font-family: 'Special Elite', monospace; font-size: 18px; color: var(--maroon-dark); text-transform: uppercase; margin-bottom: 12px;">Track Your Commission</h2>
             <div class="search-form">
-                <input type="text" id="tracker-search-input" class="search-input" placeholder="Enter your name to see your status...">
+                <input type="text" id="tracker-search-input" class="search-input" placeholder="Enter your private commission ID...">
                 <button class="search-btn" onclick="searchCommission()">Search Status</button>
             </div>
 
@@ -425,26 +425,9 @@
         }
 
         function renderQueue() {
-            const list = Storage.get(Storage.KEYS.SUBMISSIONS, []);
             const container = document.getElementById('client-queue-list');
             if (!container) return;
-
-            if (list.length === 0) {
-                container.innerHTML = '<div style="text-align:center; color:#888; padding: 20px;">No commissions queued.</div>';
-                return;
-            }
-
-            container.innerHTML = list.map(sub => `
-                <div class="queue-item" onclick="selectQueueItem('${escapeHtml(sub.name)}')" style="cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" title="Click to track status">
-                    <div class="queue-item-info">
-                        <strong>${escapeHtml(sub.service)}</strong>
-                        <small>Client: ${censorName(sub.name)} • Target: ${sub.deadline || 'Flexible'}</small>
-                    </div>
-                    <div>
-                        ${getStatusBadge(sub.status)}
-                    </div>
-                </div>
-            `).join('');
+            container.innerHTML = '<div style="text-align:center; color:#888; padding: 20px;">Enter the private commission ID from your confirmation to view its status.</div>';
         }
 
         function selectQueueItem(clientName) {
@@ -459,28 +442,23 @@
             return parts.map(p => p[0].toUpperCase() + '.').join(' ');
         }
 
-        function searchCommission() {
-            const query = document.getElementById('tracker-search-input').value.trim().toLowerCase();
+        async function searchCommission() {
+            const query = document.getElementById('tracker-search-input').value.trim();
             const resultBox = document.getElementById('tracker-result');
             if (!query) {
                 resultBox.style.display = 'none';
                 return;
             }
-
-            const list = Storage.get(Storage.KEYS.SUBMISSIONS, []);
-            const match = list.find(s => 
-                (s.name && s.name.toLowerCase().includes(query)) ||
-                (s.service && s.service.toLowerCase().includes(query)) ||
-                (s.id && s.id.toLowerCase() === query)
-            );
-
             resultBox.style.display = 'block';
-
+            resultBox.innerHTML = '<div style="text-align:center;padding:20px;color:#777;">Checking commission status…</div>';
+            try {
+            const response = await Storage.trackCommission(query);
+            const match = response.commission;
             if (!match) {
                 resultBox.innerHTML = `
                     <div style="text-align: center; padding: 20px; color: #a94442;">
                         <p style="font-weight: bold; font-size: 16px;">Commission not found.</p>
-                        <p style="font-size: 13px; color: #777;">Please double check your Client Name or Service Type.</p>
+                        <p style="font-size: 13px; color: #777;">Check the private commission ID from your confirmation.</p>
                     </div>
                 `;
                 return;
@@ -491,49 +469,19 @@
             const currentIndex = statuses.indexOf(match.status);
             const fillPercent = currentIndex >= 0 ? (currentIndex / 3) * 100 : 0;
 
-            // Lookup payment info from match or cross-reference Payments sheet
-            let paidAmount = parseFloat(match.amountPaid);
-            let agreedAmount = parseFloat(match.agreedPrice);
-            let balanceAmount = parseFloat(match.balance);
-
-            // Cross-reference Payments sheet for full payment details
-            const payments = Storage.get(Storage.KEYS.PAYMENTS, []);
-            const relatedPayments = payments.filter(p =>
-                (match.id && p.commId === match.id) ||
-                (p.clientName && match.name && p.clientName.toLowerCase() === match.name.toLowerCase())
-            );
-
-            if (relatedPayments.length > 0) {
-                // Sum all related payments
-                const totalPaid = relatedPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
-                const latestPayment = relatedPayments[0];
-                const latestAgreed = parseFloat(latestPayment.agreedPrice) || 0;
-
-                if (isNaN(paidAmount) || paidAmount <= 0) {
-                    paidAmount = totalPaid;
-                }
-                if (isNaN(agreedAmount) || agreedAmount <= 0) {
-                    agreedAmount = latestAgreed || (latestPayment.paymentType === 'fully_paid' ? totalPaid : totalPaid * 2);
-                }
-                balanceAmount = Math.max(0, agreedAmount - paidAmount);
-            }
-
-            // If paymentType is fully_paid and we still have no paidAmount but have agreedPrice, treat paid = agreed
+            const paidAmount = Number(match.amountPaid) || 0;
+            const agreedAmount = Number(match.agreedPrice) || 0;
+            const balanceAmount = Math.max(0, Number(match.balance) || agreedAmount - paidAmount);
             const isFullyPaid = (match.paymentType === 'fully_paid') || (balanceAmount === 0 && paidAmount > 0);
-            if (isFullyPaid && (isNaN(paidAmount) || paidAmount <= 0) && !isNaN(agreedAmount) && agreedAmount > 0) {
-                paidAmount = agreedAmount;
-                balanceAmount = 0;
-            }
 
             const statusLabel = isFullyPaid ? 'Fully Paid' : '50% DP';
 
             resultBox.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 12px; margin-bottom: 15px;">
                     <div>
-                        <span style="font-size: 20px; font-weight: bold; color: var(--maroon);">${match.service}</span>
-                        <span style="margin-left: 10px; font-size: 14px; color: #666;">Client: ${match.name}</span>
+                <span style="font-size: 20px; font-weight: bold; color: var(--maroon);">${escapeHtml(match.service)}</span>
                     </div>
-                    <div>${getStatusBadge(match.status)}</div>
+                    <div>${getStatusBadge(escapeHtml(match.status))}</div>
                 </div>
 
                 <!-- PROGRESS STEPPER -->
@@ -559,7 +507,6 @@
                 </div>
 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; background: #faf8f5; padding: 15px; border-radius: 4px; font-size: 13px;">
-                    <div><strong>Client:</strong> ${escapeHtml(match.name)}</div>
                     <div><strong>Target Deadline:</strong> ${escapeHtml(match.deadline || 'Flexible')}</div>
                     <div><strong>Submitted Date:</strong> ${escapeHtml(match.submittedAt || 'Recent')}</div>
                     <div><strong>Payment Method:</strong> <span style="text-transform: uppercase;">${escapeHtml(match.payment || 'N/A')}</span></div>
@@ -584,9 +531,12 @@
 
                 <div style="margin-top: 15px; font-size: 13px; color: #444;">
                     <strong>Commission Scope:</strong>
-                    <p style="margin-top: 4px; color: #666;">${match.description || 'Custom Commission'}</p>
+                    <p style="margin-top: 4px; color: #666;">${escapeHtml(match.description || 'Custom Commission')}</p>
                 </div>
             `;
+            } catch (error) {
+                resultBox.innerHTML = `<div style="text-align:center;padding:20px;color:#a94442;">${escapeHtml(error.message || 'Could not find that commission ID.')}</div>`;
+            }
         }
 
         // Calendar Rendering

@@ -97,42 +97,14 @@ function updateSidebarAvatar(event) {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = function(e) {
-        const base64 = e.target.result;
-        let session = Storage.get(Storage.KEYS.ADMIN_SESSION, null);
-        if (session) {
-            session.avatar = base64;
-            Storage.set(Storage.KEYS.ADMIN_SESSION, session);
-        } else {
-            session = {
-                accountName: 'Main Admin',
-                username: 'admin',
-                name: 'Thalie',
-                avatar: base64,
-                loggedInAt: new Date().toISOString()
-            };
-            Storage.set(Storage.KEYS.ADMIN_SESSION, session);
+    reader.onload = async function(e) {
+        try {
+            await Storage.updateAvatar(e.target.result);
+            checkAuth();
+            showToast('Profile photo updated successfully!');
+        } catch (error) {
+            showToast(error.message || 'Could not save profile photo.');
         }
-
-        let users = Storage.get(Storage.KEYS.ADMIN_USERS, []);
-        if (Array.isArray(users) && users.length > 0) {
-            const u = users.find(x => x.username === session.username || x.accountName === session.accountName) || users[users.length - 1];
-            if (u) {
-                u.avatar = base64;
-                Storage.set(Storage.KEYS.ADMIN_USERS, users);
-            }
-        } else {
-            users = [{
-                accountName: session.accountName || 'Thalie',
-                username: session.username || 'admin',
-                avatar: base64,
-                createdAt: new Date().toISOString()
-            }];
-            Storage.set(Storage.KEYS.ADMIN_USERS, users);
-        }
-
-        checkAuth();
-        showToast('Profile photo updated successfully!');
     };
     reader.readAsDataURL(file);
 }
@@ -170,7 +142,7 @@ function checkAuth() {
 
 function isMainAdminSession() {
     const session = Storage.get(Storage.KEYS.ADMIN_SESSION, null);
-    return !!session && session.username === 'admin' && session.accountName === 'Main Admin';
+    return !!session && session.role === 'admin';
 }
 
 function switchAuthTab(tab) {
@@ -228,106 +200,35 @@ function backToSignIn() {
 
 function resetCommissionerPassword(event) {
     event.preventDefault();
-    const accountName = document.getElementById('reset-account-name').value.trim().toLowerCase();
-    const password = document.getElementById('reset-new-password').value;
-    const confirmation = document.getElementById('reset-confirm-password').value;
     const errorEl = document.getElementById('reset-error-msg');
-    const showError = message => {
-        if (errorEl) {
-            errorEl.textContent = message;
-            errorEl.style.display = 'block';
-        }
-    };
-
-    if (password.length < 4) return showError('Password must be at least 4 characters.');
-    if (password !== confirmation) return showError('Passwords do not match. Please re-enter.');
-
-    const users = Storage.get(Storage.KEYS.ADMIN_USERS, []);
-    const user = users.find(candidate => [candidate.username, candidate.accountName, candidate.name]
-        .some(value => String(value || '').trim().toLowerCase() === accountName));
-    if (!user) return showError('No commissioner account was found with that name.');
-
-    user.password = password;
-    Storage.set(Storage.KEYS.ADMIN_USERS, users);
-    document.getElementById('login-username').value = user.accountName || user.username || accountName;
-    document.getElementById('login-password').value = '';
-    document.getElementById('reset-password-form')?.reset();
-    backToSignIn();
-    const loginError = document.getElementById('login-error-msg');
-    if (loginError) {
-        loginError.textContent = 'Password updated. Sign in with your new password.';
-        loginError.style.display = 'block';
+    if (errorEl) {
+        errorEl.textContent = 'Secure email recovery is not configured yet. Please contact the Main Admin to reset your access.';
+        errorEl.style.display = 'block';
     }
 }
 
-function handleLoginSubmit(event) {
+async function handleLoginSubmit(event) {
     event.preventDefault();
     const accountNameInput = document.getElementById('login-username').value.trim().toLowerCase();
     const passwordInput = document.getElementById('login-password').value;
     const errorEl = document.getElementById('login-error-msg');
 
-    const users = Storage.get(Storage.KEYS.ADMIN_USERS, []);
-    const mainAdmin = users.find(u => (u.username || '').toLowerCase() === 'admin');
-
-    // Keep the built-in fallback only when the default admin record is missing.
-    if ((accountNameInput === 'admin' || accountNameInput === 'thalie') &&
-        ((mainAdmin && mainAdmin.password === passwordInput) || (!mainAdmin && passwordInput === 'password123'))) {
+    try {
+        const user = await Storage.login(accountNameInput, passwordInput);
         if (errorEl) errorEl.style.display = 'none';
-        const session = {
-            accountName: 'Main Admin',
-            username: 'admin',
-            name: 'Thalie',
-            avatar: '',
-            loggedInAt: new Date().toISOString()
-        };
-        Storage.set(Storage.KEYS.ADMIN_SESSION, session);
         checkAuth();
-        showToast('Welcome back, Main Admin!');
-        return;
-    }
-
-    // 2. Check registered commissioner accounts
-    const foundUser = users.find(u => {
-        const uName = (u.username || '').toLowerCase();
-        const aName = (u.accountName || '').toLowerCase();
-        return (uName === accountNameInput || aName === accountNameInput) && u.password === passwordInput;
-    });
-
-    if (foundUser) {
-        if (foundUser.approvalStatus === 'pending') {
-            if (errorEl) {
-                errorEl.textContent = 'Your registration is waiting for Main Admin approval.';
-                errorEl.style.display = 'block';
-            }
-            return;
-        }
-        if (foundUser.approvalStatus === 'rejected') {
-            if (errorEl) {
-                errorEl.textContent = 'This registration was declined. Please contact the Main Admin.';
-                errorEl.style.display = 'block';
-            }
-            return;
-        }
-        if (errorEl) errorEl.style.display = 'none';
-        const session = {
-            accountName: foundUser.accountName || foundUser.username,
-            username: foundUser.username,
-            name: foundUser.accountName || foundUser.name || foundUser.username,
-            avatar: foundUser.avatar || '',
-            loggedInAt: new Date().toISOString()
-        };
-        Storage.set(Storage.KEYS.ADMIN_SESSION, session);
-        checkAuth();
-        showToast(`Welcome, ${session.accountName}!`);
-    } else {
+        renderCommissionerRegistrations();
+        renderAccountApprovals();
+        showToast(`Welcome, ${user.accountName}!`);
+    } catch (error) {
         if (errorEl) {
-            errorEl.textContent = 'Invalid commissioner account name or password.';
+            errorEl.textContent = error.message || 'Unable to sign in.';
             errorEl.style.display = 'block';
         }
     }
 }
 
-function handleRegisterSubmit(event) {
+async function handleRegisterSubmit(event) {
     event.preventDefault();
     const accountName = document.getElementById('reg-account-name').value.trim();
     const password = document.getElementById('reg-password').value;
@@ -345,56 +246,34 @@ function handleRegisterSubmit(event) {
         return;
     }
 
-    if (password.length < 4) {
+    if (password.length < 12) {
         if (errorEl) {
-            errorEl.textContent = 'Password must be at least 4 characters.';
+            errorEl.textContent = 'Use a password with at least 12 characters.';
             errorEl.style.display = 'block';
         }
         return;
     }
 
-    const users = Storage.get(Storage.KEYS.ADMIN_USERS, []);
-    const exists = users.find(u => 
-        (u.username || '').toLowerCase() === accountName.toLowerCase() ||
-        (u.accountName || '').toLowerCase() === accountName.toLowerCase()
-    );
-
-    if (exists) {
+    try {
+        await Storage.registerCommissioner(accountName, password, tempRegisterAvatar);
+        event.target.reset();
+        tempRegisterAvatar = '';
+        switchAuthTab('login');
+        if (successEl) {
+            successEl.textContent = 'Registration submitted. The Main Admin must approve your account before you can sign in.';
+            successEl.style.display = 'block';
+        }
+    } catch (error) {
         if (errorEl) {
-            errorEl.textContent = 'This commissioner account name is already registered.';
+            errorEl.textContent = error.message || 'Registration could not be submitted.';
             errorEl.style.display = 'block';
         }
-        return;
     }
-
-    const newUser = {
-        id: 'COMM-' + Date.now(),
-        accountName: accountName,
-        username: accountName.toLowerCase(),
-        name: accountName,
-        password: password,
-        avatar: tempRegisterAvatar,
-        createdAt: new Date().toISOString(),
-        approvalStatus: 'pending',
-        paid: false
-    };
-
-    users.push(newUser);
-    Storage.set(Storage.KEYS.ADMIN_USERS, users);
-    event.target.reset();
-    tempRegisterAvatar = '';
-    switchAuthTab('login');
-    if (successEl) {
-        successEl.textContent = 'Registration submitted. The Main Admin must approve your account before you can sign in.';
-        successEl.style.display = 'block';
-    }
-    renderCommissionerRegistrations();
-    updateBadges();
 }
 
-function handleLogout() {
+async function handleLogout() {
     if (!confirm('Are you sure you want to log out?')) return;
-    localStorage.removeItem(Storage.KEYS.ADMIN_SESSION);
+    await Storage.logout();
     document.getElementById('login-password').value = '';
     const authWrapper = document.getElementById('auth-wrapper');
     if (authWrapper) authWrapper.classList.remove('hidden');
@@ -3153,7 +3032,7 @@ function renderAccountApprovals() {
             name: user.accountName || user.username,
             date: user.createdAt,
             paid: !!user.paid,
-            status: user.approvalStatus === 'pending' ? 'pending' : user.approvalStatus === 'rejected' ? 'declined' : 'approved'
+            status: user.approvalStatus === 'pending' ? 'pending' : ['rejected', 'declined'].includes(user.approvalStatus) ? 'declined' : 'approved'
         }));
     const clients = Storage.get(Storage.KEYS.CLIENT_ACCOUNTS, []).map(account => ({
         type: 'client',
@@ -3215,10 +3094,18 @@ function renderAccountApprovals() {
     updateBadges();
 }
 
-function setAccountPayment(type, encodedKey, paymentStatus) {
+async function setAccountPayment(type, encodedKey, paymentStatus) {
     if (!isMainAdminSession()) return;
     const key = decodeURIComponent(encodedKey);
-    const storageKey = type === 'commissioner' ? Storage.KEYS.ADMIN_USERS : Storage.KEYS.CLIENT_ACCOUNTS;
+    if (type === 'commissioner') {
+        try {
+            await Storage.request('/api/admin-accounts', { method: 'POST', body: JSON.stringify({ id: key, paid: paymentStatus === 'paid' }) });
+            await Storage.refresh();
+            renderAccountApprovals();
+        } catch (error) { showToast(error.message); }
+        return;
+    }
+    const storageKey = Storage.KEYS.CLIENT_ACCOUNTS;
     const records = Storage.get(storageKey, []);
     const record = records.find(item => String(item.id || item.username || item.accountName) === key);
     if (!record) return;
@@ -3227,22 +3114,14 @@ function setAccountPayment(type, encodedKey, paymentStatus) {
     renderAccountApprovals();
 }
 
-function setAccountApproval(type, encodedKey, decision) {
+async function setAccountApproval(type, encodedKey, decision) {
     if (!isMainAdminSession()) return;
     const key = decodeURIComponent(encodedKey);
     if (type === 'commissioner') {
-        const users = Storage.get(Storage.KEYS.ADMIN_USERS, []);
-        const user = users.find(item => String(item.id || item.username || item.accountName) === key);
-        if (!user) return;
-        user.approvalStatus = decision === 'approved' ? 'approved' : decision === 'declined' ? 'rejected' : 'pending';
-        if (decision === 'approved') user.approvedAt = new Date().toISOString();
-        if (decision === 'declined') user.declinedAt = new Date().toISOString();
-        Storage.set(Storage.KEYS.ADMIN_USERS, users);
-        showToast(decision === 'approved'
-            ? `${user.accountName} can now sign in.`
-            : decision === 'declined'
-                ? `${user.accountName} was declined and cannot sign in.`
-                : `${user.accountName} is pending approval.`);
+        try {
+            await Storage.decideCommissioner(key, decision);
+            showToast(decision === 'approved' ? 'Commissioner can now sign in.' : decision === 'declined' ? 'Commissioner was declined.' : 'Commissioner is pending approval.');
+        } catch (error) { showToast(error.message); }
     } else {
         const accounts = Storage.get(Storage.KEYS.CLIENT_ACCOUNTS, []);
         const account = accounts.find(item => String(item.id || item.accountName) === key);
@@ -3256,29 +3135,17 @@ function setAccountApproval(type, encodedKey, decision) {
     renderAccountApprovals();
 }
 
-function approveCommissionerAccount(userKey) {
+async function approveCommissionerAccount(userKey) {
     if (!isMainAdminSession()) return;
-    const users = Storage.get(Storage.KEYS.ADMIN_USERS, []);
-    const user = users.find(item => (item.id || item.username) === userKey);
-    if (!user || user.approvalStatus !== 'pending') return;
-    user.approvalStatus = 'approved';
-    user.approvedAt = new Date().toISOString();
-    Storage.set(Storage.KEYS.ADMIN_USERS, users);
-    renderAccountApprovals();
-    showToast(`${user.accountName || user.username} can now sign in.`);
+    try { await Storage.decideCommissioner(userKey, 'approved'); renderAccountApprovals(); showToast('Commissioner can now sign in.'); }
+    catch (error) { showToast(error.message); }
 }
 
-function declineCommissionerAccount(userKey) {
+async function declineCommissionerAccount(userKey) {
     if (!isMainAdminSession()) return;
     if (!confirm('Decline this Commissioner Portal registration? The account will not be able to sign in.')) return;
-    const users = Storage.get(Storage.KEYS.ADMIN_USERS, []);
-    const user = users.find(item => (item.id || item.username) === userKey && item.approvalStatus === 'pending');
-    if (!user) return;
-    user.approvalStatus = 'rejected';
-    user.declinedAt = new Date().toISOString();
-    Storage.set(Storage.KEYS.ADMIN_USERS, users);
-    renderAccountApprovals();
-    showToast('Commissioner registration declined. They cannot sign in.');
+    try { await Storage.decideCommissioner(userKey, 'declined'); renderAccountApprovals(); showToast('Commissioner registration declined. They cannot sign in.'); }
+    catch (error) { showToast(error.message); }
 }
 
 function acceptClientAccount(id) {

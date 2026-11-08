@@ -309,11 +309,8 @@
             }
         }
 
-        function handleCommissionSubmit(event) {
+        async function handleCommissionSubmit(event) {
             event.preventDefault();
-
-            const list = Storage.get(Storage.KEYS.SUBMISSIONS, []);
-            const newId = 'COM-' + (1000 + list.length + 1);
 
             const channel = document.getElementById('contact-channel')?.value || 'Contact';
             const account = document.getElementById('contact-account')?.value.trim() || '';
@@ -332,7 +329,6 @@
             const detectedOption = isFull ? 'fully_paid' : 'downpayment';
 
             const newComm = {
-                id: newId,
                 name: document.getElementById('name').value.trim(),
                 email: document.getElementById('email').value.trim(),
                 contact: fullContact,
@@ -351,41 +347,18 @@
                 submittedAt: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
             };
 
-            list.unshift(newComm);
-            Storage.set(Storage.KEYS.SUBMISSIONS, list);
+            try {
+                const saved = await Storage.submitCommission(newComm);
+                const newId = saved.id;
 
-            // Also record in Payment Tracker sheet with AI Verification data
-            const payments = Storage.get(Storage.KEYS.PAYMENTS, []);
-            const pct = agreedPrice > 0 ? Math.round((amountPaid / agreedPrice) * 100) : 100;
-            const aiStatusText = isFull ? '100% Full Payment Verified' : `${pct}% Downpayment Verified`;
-            const aiNote = `AI Check: Receipt analyzed. Paid ₱${amountPaid.toLocaleString()} of ₱${agreedPrice.toLocaleString()} agreed price (${isFull ? '100% Settled' : 'Balance: ₱' + balanceDue.toLocaleString()}).`;
-
-            payments.unshift({
-                id: 'PAY-' + (1000 + payments.length + 1),
-                clientName: newComm.name,
-                service: newComm.service,
-                amount: amountPaid,
-                agreedPrice: agreedPrice,
-                balance: balanceDue,
-                mode: paymentVal,
-                paymentType: detectedOption,
-                status: 'Confirmed',
-                date: new Date().toISOString().split('T')[0],
-                receipt: tempReceiptBase64,
-                notes: 'Commission #' + newId,
-                commId: newId,
-                aiVerified: true,
-                aiStatusText: aiStatusText,
-                aiNote: aiNote
-            });
-            Storage.set(Storage.KEYS.PAYMENTS, payments);
-
-            // Hide form and show success
-            document.getElementById('commission-form-card').style.display = 'none';
-            const successBox = document.getElementById('form-success-box');
-            document.getElementById('assigned-comm-id').textContent = newId;
-            document.getElementById('track-direct-link').href = `tracker.html?id=${newId}`;
-            successBox.style.display = 'block';
+                document.getElementById('commission-form-card').style.display = 'none';
+                const successBox = document.getElementById('form-success-box');
+                document.getElementById('assigned-comm-id').textContent = newId;
+                document.getElementById('track-direct-link').href = `tracker.html?id=${newId}`;
+                successBox.style.display = 'block';
+            } catch (error) {
+                alert(error.message || 'Could not send commission request. Please try again.');
+            }
         }
 
         function resetCommissionForm() {
@@ -415,7 +388,7 @@
             if (isPaymentMode) document.getElementById('additional-payment-client')?.focus();
         }
 
-        function submitAdditionalPayment(event) {
+        async function submitAdditionalPayment(event) {
             event.preventDefault();
             const file = document.getElementById('additional-payment-receipt')?.files?.[0];
             if (!file || !file.type.startsWith('image/')) {
@@ -423,20 +396,18 @@
                 return;
             }
             const reader = new FileReader();
-            reader.onload = () => {
-                const proofs = Storage.get(Storage.KEYS.PAYMENT_PROOFS, []);
-                proofs.unshift({
-                    id: 'PROOF-' + Date.now(),
-                    clientName: document.getElementById('additional-payment-client').value.trim(),
-                    receipt: reader.result,
-                    submittedAt: new Date().toISOString()
-                });
-                Storage.set(Storage.KEYS.PAYMENT_PROOFS, proofs);
+            reader.onload = async () => {
+                try {
+                    await Storage.submitPaymentProof({
+                        clientName: document.getElementById('additional-payment-client').value.trim(),
+                        receipt: reader.result
+                    });
                 const form = document.getElementById('additional-payment-form');
                 form.reset();
                 const message = document.getElementById('additional-payment-message');
                 message.textContent = 'Your payment proof was submitted. The commissioner will match it to your balance.';
                 message.style.display = 'block';
+                } catch (error) { alert(error.message || 'Could not submit payment proof.'); }
             };
             reader.readAsDataURL(file);
         }
