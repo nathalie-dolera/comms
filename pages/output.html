@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Output Gallery - Thalie's Portfolio</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        .output-page-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 85px 20px 50px;
+        }
+
+        .output-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .output-header h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 44px;
+            color: var(--paper-cream);
+        }
+
+        .output-header p {
+            font-family: 'Special Elite', monospace;
+            color: var(--rose-light);
+            font-size: 14.5px;
+            letter-spacing: 1px;
+            margin-top: 6px;
+        }
+
+        /* Category Filter Tabs */
+        .filter-bar {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 35px;
+        }
+
+        .filter-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--paper-cream);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-family: 'Special Elite', monospace;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: var(--rose);
+            color: #ffffff;
+            border-color: var(--rose);
+        }
+
+        /* Polaroid Gallery Grid */
+        .polaroid-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 40px 30px;
+            justify-content: center;
+        }
+
+        /* Polaroid Card */
+        .polaroid-card {
+            background: #ffffff;
+            padding: 14px 14px 20px 14px;
+            border-radius: 4px;
+            box-shadow: 0 10px 25px var(--shadow-dark), 0 2px 6px rgba(0,0,0,0.2);
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* Subtle organic rotations */
+        .polaroid-card:nth-child(4n+1) { transform: rotate(-1.5deg); }
+        .polaroid-card:nth-child(4n+2) { transform: rotate(1.2deg); }
+        .polaroid-card:nth-child(4n+3) { transform: rotate(-0.8deg); }
+        .polaroid-card:nth-child(4n+4) { transform: rotate(1.8deg); }
+
+        .polaroid-card:hover {
+            transform: scale(1.03) rotate(0deg) !important;
+            box-shadow: 0 18px 45px rgba(0,0,0,0.55);
+            z-index: 10;
+        }
+
+        /* Paper tape on polaroid */
+        .polaroid-tape {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 75px;
+            height: 20px;
+            background: rgba(230, 215, 195, 0.75);
+            border-radius: 2px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        /* ENTIRE SCREEN FULL PREVIEW CONTAINER (NO SQUISHING / NO CROPPING) */
+        .polaroid-card-img {
+            width: 100%;
+            height: 330px;
+            background: #fbf8f3;
+            border: 1px solid #ebdcd0;
+            overflow: hidden;
+            border-radius: 3px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+
+        .polaroid-card-img img {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            display: block;
+            border-radius: 2px;
+            transition: transform 0.3s ease, opacity 0.2s ease;
+        }
+
+        .polaroid-card:hover .polaroid-card-img img {
+            transform: scale(1.02);
+        }
+
+        /* Multi-sample preview badges and controls on polaroid */
+        .card-sample-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(107, 24, 20, 0.9);
+            color: #ffffff;
+            padding: 3px 9px;
+            border-radius: 12px;
+            font-family: 'Special Elite', monospace;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            z-index: 4;
+            pointer-events: none;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+        }
+
+        .card-nav-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(42, 16, 16, 0.82);
+            color: #ffffff;
+            border: 1px solid rgba(255,255,255,0.4);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-family: monospace;
+            cursor: pointer;
+            z-index: 6;
+            transition: all 0.2s;
+            opacity: 0.85;
+        }
+
+        .card-nav-arrow:hover {
+            background: var(--maroon);
+            opacity: 1;
+            transform: translateY(-50%) scale(1.12);
+        }
+
+        .card-nav-arrow.prev { left: 8px; }
+        .card-nav-arrow.next { right: 8px; }
+
+        .card-sample-dots {
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+            z-index: 5;
+            background: rgba(42, 16, 16, 0.65);
+            padding: 4px 10px;
+            border-radius: 12px;
+            backdrop-filter: blur(2px);
+        }
+
+        .card-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.5);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .card-dot.active {
+            background: #ffffff;
+            transform: scale(1.3);
+        }
+
+        .card-quick-zoom-btn {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.92);
+            color: var(--maroon);
+            border: 1px solid #ebdcd0;
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 5;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            transition: all 0.2s;
+        }
+
+        .card-quick-zoom-btn:hover {
+            background: var(--maroon);
+            color: #ffffff;
+            border-color: var(--maroon);
+        }
+
+        .polaroid-caption {
+            padding-top: 14px;
+            text-align: center;
+        }
+
+        .polaroid-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 17px;
+            color: var(--maroon-dark);
+            font-weight: 700;
+            line-height: 1.3;
+        }
+
+        .polaroid-sub {
+            font-family: 'Dancing Script', cursive;
+            font-size: 16px;
+            color: var(--maroon);
+            margin-top: 4px;
+        }
+
+        .polaroid-view-link {
+            font-size: 11px;
+            color: var(--rose);
+            margin-top: 8px;
+            font-family: 'Special Elite', monospace;
+            letter-spacing: 0.8px;
+            display: inline-block;
+            transition: color 0.2s;
+        }
+
+        .polaroid-card:hover .polaroid-view-link {
+            color: var(--maroon);
+            text-decoration: underline;
+        }
+
+        /* Lightbox Overlay */
+        .lightbox-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.93);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 20px;
+        }
+
+        .lightbox-overlay.active {
+            display: flex;
+        }
+
+        .lightbox-content {
+            position: relative;
+            max-width: 95vw;
+            max-height: 94vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .lightbox-content img {
+            max-width: 95vw;
+            max-height: 80vh;
+            object-fit: contain;
+            border-radius: 6px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: -16px;
+            right: -16px;
+            width: 38px;
+            height: 38px;
+            background: var(--maroon);
+            color: #fff;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            font-size: 22px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            line-height: 1;
+            z-index: 20;
+        }
+
+        .lightbox-close:hover {
+            background: #8b2622;
+        }
+
+        .lightbox-nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(42, 16, 16, 0.8);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            font-family: monospace;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        .lightbox-nav-btn:hover {
+            background: var(--maroon);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .lightbox-nav-btn.prev { left: 20px; }
+        .lightbox-nav-btn.next { right: 20px; }
+
+        .lightbox-meta {
+            text-align: center;
+            margin-top: 14px;
+        }
+
+        .lightbox-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 20px;
+            color: #f5ede4;
+            font-weight: 700;
+        }
+
+        .lightbox-caption {
+            font-family: 'Special Elite', monospace;
+            font-size: 13px;
+            color: var(--rose-light);
+            margin-top: 4px;
+        }
+
+        .lightbox-thumbs {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 12px;
+            flex-wrap: wrap;
+            max-width: 80vw;
+        }
+
+        .lightbox-thumb-img {
+            width: 52px;
+            height: 52px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 2px solid rgba(255,255,255,0.4);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .lightbox-thumb-img:hover, .lightbox-thumb-img.active {
+            border-color: #ffffff;
+            transform: scale(1.12);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        .lightbox-detail-btn {
+            margin-top: 14px;
+            display: inline-block;
+            background: var(--rose);
+            color: #ffffff;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-family: 'Special Elite', monospace;
+            font-size: 12.5px;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+
+        .lightbox-detail-btn:hover {
+            background: var(--maroon);
+        }
+
+        /* No-image placeholder inside polaroid */
+        .polaroid-placeholder {
+            text-align: center;
+            color: #8c5b52;
+            padding: 20px;
+        }
+        .polaroid-placeholder svg {
+            width: 44px;
+            height: 44px;
+            margin-bottom: 8px;
+            opacity: 0.7;
+        }
+        .polaroid-placeholder div {
+            font-family: 'Special Elite', monospace;
+            font-size: 12px;
+            color: #8c5b52;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-background"></div>
+
+    <!-- Navigation -->
+    <nav class="top-nav">
+        <a href="../index.html">Home</a>
+        <a href="about.html">About</a>
+        <a href="output.html" class="active">Output</a>
+        <a href="feedback.html">Feedback</a>
+        <a href="terms.html">T &amp; C</a>
+        <a href="form.html">Form</a>
+        <a href="tracker.html">Tracker &amp; Slots</a>
+    </nav>
+
+    <div class="output-page-container">
+        <div class="output-header">
+            <h1>Works &amp; Outputs</h1>
+            <p>Click any polaroid to view all sample works in full display</p>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar" id="output-filter-bar">
+            <!-- Dynamically populated via JS -->
+        </div>
+
+        <!-- Polaroid Gallery Grid -->
+        <div class="polaroid-gallery" id="polaroid-gallery-container">
+            <!-- Dynamically injected from Storage -->
+        </div>
+    </div>
+
+    <!-- Fullscreen Lightbox for previewing all samples -->
+    <div class="lightbox-overlay" id="lightbox-overlay" onclick="closeLightbox(event)">
+        <button type="button" class="lightbox-nav-btn prev" id="lightbox-prev-btn" onclick="event.stopPropagation(); changeLightboxSample(-1);">‹</button>
+        <button type="button" class="lightbox-nav-btn next" id="lightbox-next-btn" onclick="event.stopPropagation(); changeLightboxSample(1);">›</button>
+        <div class="lightbox-content" onclick="event.stopPropagation()">
+            <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+            <img id="lightbox-img" src="" alt="Output Sample Preview">
+            <div class="lightbox-meta">
+                <div class="lightbox-title" id="lightbox-title"></div>
+                <div class="lightbox-caption" id="lightbox-caption"></div>
+                <div class="lightbox-thumbs" id="lightbox-samples-thumbs"></div>
+                <div>
+                    <a href="#" id="lightbox-detail-link" class="lightbox-detail-btn">Open Full Project Showcase →</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/storage.js"></script>
+    <script>
+        let currentFilter = 'all';
+        let cardSampleIndices = {}; // itemId -> currentSampleIndex
+        let activeLightboxItem = null;
+        let activeLightboxSampleIndex = 0;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderFilterBar();
+            renderGallery();
+        });
+
+        function renderFilterBar() {
+            const filterContainer = document.getElementById('output-filter-bar');
+            if (!filterContainer) return;
+
+            let categories = Storage.get(Storage.KEYS.OUTPUT_CATEGORIES, []);
+            if (!Array.isArray(categories)) categories = [];
+
+            const outputs = Storage.get(Storage.KEYS.OUTPUTS, []);
+            outputs.forEach(o => {
+                if (o.category && !categories.includes(o.category)) {
+                    categories.push(o.category);
+                }
+            });
+
+            filterContainer.innerHTML = `
+                <button class="filter-btn ${currentFilter === 'all' ? 'active' : ''}" onclick="filterGallery('all', this)">All Outputs</button>
+                ${categories.map(cat => `
+                    <button class="filter-btn ${currentFilter === cat ? 'active' : ''}" onclick="filterGallery('${escapeHtml(cat)}', this)">${escapeHtml(cat)}</button>
+                `).join('')}
+            `;
+        }
+
+        function filterGallery(category, btn) {
+            currentFilter = category;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            renderGallery();
+        }
+
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function getItemSamples(item) {
+            if (!item) return [];
+            if (Array.isArray(item.samples) && item.samples.length > 0) {
+                return item.samples;
+            }
+            if (item.coverImage) {
+                return [item.coverImage];
+            }
+            return [];
+        }
+
+        function renderGallery() {
+            let list = Storage.get(Storage.KEYS.OUTPUTS, []);
+            const container = document.getElementById('polaroid-gallery-container');
+            if (!container) return;
+
+            if (currentFilter !== 'all') {
+                list = list.filter(item => item.category === currentFilter);
+            }
+
+            if (list.length === 0) {
+                container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--paper-cream); padding: 50px;">No output items found for this category.</div>';
+                return;
+            }
+
+            container.innerHTML = list.map(item => {
+                const samples = getItemSamples(item);
+                const totalSamples = samples.length;
+                if (cardSampleIndices[item.id] === undefined || cardSampleIndices[item.id] >= totalSamples) {
+                    cardSampleIndices[item.id] = 0;
+                }
+                const activeIndex = cardSampleIndices[item.id];
+                const activeSrc = totalSamples > 0 ? Storage.resolveAssetPath(samples[activeIndex]) : '';
+
+                return `
+                <div class="polaroid-card" id="card-${item.id}" onclick="handleCardClick(event, '${item.id}')">
+                    <div class="polaroid-tape"></div>
+                    <div class="polaroid-card-img" id="stage-${item.id}">
+                        ${totalSamples > 0 ? `
+                            <img id="img-${item.id}" src="${activeSrc}" alt="${escapeHtml(item.title)} - Sample ${activeIndex + 1}">
+                            
+                            <!-- Quick zoom button -->
+                            <button type="button" class="card-quick-zoom-btn" onclick="openLightboxForItem(event, '${item.id}', ${activeIndex})" title="Full Screen View">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="15 3 21 3 21 9"></polyline>
+                                    <polyline points="9 21 3 21 3 15"></polyline>
+                                    <line x1="21" y1="3" x2="14" y2="10"></line>
+                                    <line x1="3" y1="21" x2="10" y2="14"></line>
+                                </svg>
+                            </button>
+
+                            ${totalSamples > 1 ? `
+                                <div class="card-sample-badge">${totalSamples} Samples</div>
+                                <button type="button" class="card-nav-arrow prev" onclick="cycleCardSample(event, '${item.id}', -1)" title="Previous sample">‹</button>
+                                <button type="button" class="card-nav-arrow next" onclick="cycleCardSample(event, '${item.id}', 1)" title="Next sample">›</button>
+                                <div class="card-sample-dots" id="dots-${item.id}">
+                                    ${samples.map((_, idx) => `
+                                        <div class="card-dot ${idx === activeIndex ? 'active' : ''}" onclick="setCardSample(event, '${item.id}', ${idx})"></div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                        ` : `
+                            <div class="polaroid-placeholder">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                    <polyline points="21 15 16 10 5 21"></polyline>
+                                </svg>
+                                <div>${escapeHtml(item.category || 'No samples')}</div>
+                            </div>
+                        `}
+                    </div>
+                    <div class="polaroid-caption">
+                        <div class="polaroid-title">${escapeHtml(item.title)}</div>
+                        <div class="polaroid-sub">${escapeHtml(item.category || '')}</div>
+                        <div class="polaroid-view-link">VIEW SAMPLES →</div>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        function handleCardClick(event, itemId) {
+            // If user clicked inside mini arrows, zoom button, or dots, don't navigate
+            if (event.target.closest('.card-nav-arrow') || 
+                event.target.closest('.card-quick-zoom-btn') || 
+                event.target.closest('.card-dot')) {
+                return;
+            }
+            window.location.href = `output-detail.html?id=${encodeURIComponent(itemId)}`;
+        }
+
+        function cycleCardSample(event, itemId, dir) {
+            event.stopPropagation();
+            event.preventDefault();
+
+            const list = Storage.get(Storage.KEYS.OUTPUTS, []);
+            const item = list.find(o => o.id === itemId);
+            if (!item) return;
+
+            const samples = getItemSamples(item);
+            if (samples.length <= 1) return;
+
+            let currentIdx = cardSampleIndices[itemId] || 0;
+            currentIdx = (currentIdx + dir + samples.length) % samples.length;
+            cardSampleIndices[itemId] = currentIdx;
+
+            updateCardDisplay(itemId, samples, currentIdx);
+        }
+
+        function setCardSample(event, itemId, idx) {
+            event.stopPropagation();
+            event.preventDefault();
+
+            const list = Storage.get(Storage.KEYS.OUTPUTS, []);
+            const item = list.find(o => o.id === itemId);
+            if (!item) return;
+
+            const samples = getItemSamples(item);
+            if (idx < 0 || idx >= samples.length) return;
+
+            cardSampleIndices[itemId] = idx;
+            updateCardDisplay(itemId, samples, idx);
+        }
+
+        function updateCardDisplay(itemId, samples, activeIdx) {
+            const imgEl = document.getElementById(`img-${itemId}`);
+            if (imgEl) {
+                imgEl.style.opacity = '0.4';
+                setTimeout(() => {
+                    imgEl.src = Storage.resolveAssetPath(samples[activeIdx]);
+                    imgEl.style.opacity = '1';
+                }, 120);
+            }
+
+            const dotsContainer = document.getElementById(`dots-${itemId}`);
+            if (dotsContainer) {
+                const dots = dotsContainer.querySelectorAll('.card-dot');
+                dots.forEach((dot, idx) => {
+                    if (idx === activeIdx) {
+                        dot.classList.add('active');
+                    } else {
+                        dot.classList.remove('active');
+                    }
+                });
+            }
+        }
+
+        /* Lightbox Fullscreen Functions */
+        function openLightboxForItem(event, itemId, sampleIndex) {
+            if (event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
+
+            const list = Storage.get(Storage.KEYS.OUTPUTS, []);
+            const item = list.find(o => o.id === itemId);
+            if (!item) return;
+
+            activeLightboxItem = item;
+            activeLightboxSampleIndex = sampleIndex || 0;
+
+            renderLightboxContent();
+
+            const overlay = document.getElementById('lightbox-overlay');
+            if (overlay) {
+                overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function renderLightboxContent() {
+            if (!activeLightboxItem) return;
+
+            const samples = getItemSamples(activeLightboxItem);
+            const total = samples.length;
+            if (total === 0) return;
+
+            if (activeLightboxSampleIndex >= total) activeLightboxSampleIndex = 0;
+            if (activeLightboxSampleIndex < 0) activeLightboxSampleIndex = total - 1;
+
+            const currentSrc = Storage.resolveAssetPath(samples[activeLightboxSampleIndex]);
+            const imgEl = document.getElementById('lightbox-img');
+            const titleEl = document.getElementById('lightbox-title');
+            const capEl = document.getElementById('lightbox-caption');
+            const thumbsEl = document.getElementById('lightbox-samples-thumbs');
+            const detailLink = document.getElementById('lightbox-detail-link');
+            const prevBtn = document.getElementById('lightbox-prev-btn');
+            const nextBtn = document.getElementById('lightbox-next-btn');
+
+            if (imgEl) imgEl.src = currentSrc;
+            if (titleEl) titleEl.textContent = activeLightboxItem.title || '';
+            if (capEl) capEl.textContent = `Sample ${activeLightboxSampleIndex + 1} of ${total} — ${activeLightboxItem.category || ''}`;
+            if (detailLink) detailLink.href = `output-detail.html?id=${encodeURIComponent(activeLightboxItem.id)}`;
+
+            if (prevBtn) prevBtn.style.display = total > 1 ? 'flex' : 'none';
+            if (nextBtn) nextBtn.style.display = total > 1 ? 'flex' : 'none';
+
+            if (thumbsEl) {
+                if (total > 1) {
+                    thumbsEl.innerHTML = samples.map((s, idx) => `
+                        <img src="${Storage.resolveAssetPath(s)}" 
+                             alt="Sample ${idx + 1}" 
+                             class="lightbox-thumb-img ${idx === activeLightboxSampleIndex ? 'active' : ''}" 
+                             onclick="switchLightboxSample(${idx})">
+                    `).join('');
+                    thumbsEl.style.display = 'flex';
+                } else {
+                    thumbsEl.innerHTML = '';
+                    thumbsEl.style.display = 'none';
+                }
+            }
+        }
+
+        function switchLightboxSample(index) {
+            activeLightboxSampleIndex = index;
+            renderLightboxContent();
+        }
+
+        function changeLightboxSample(dir) {
+            if (!activeLightboxItem) return;
+            const samples = getItemSamples(activeLightboxItem);
+            if (samples.length <= 1) return;
+            activeLightboxSampleIndex = (activeLightboxSampleIndex + dir + samples.length) % samples.length;
+            renderLightboxContent();
+        }
+
+        function closeLightbox(event) {
+            if (event && event.target !== document.getElementById('lightbox-overlay')) return;
+            const overlay = document.getElementById('lightbox-overlay');
+            if (overlay) {
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            const overlay = document.getElementById('lightbox-overlay');
+            if (!overlay || !overlay.classList.contains('active')) return;
+            if (e.key === 'Escape') closeLightbox();
+            if (e.key === 'ArrowLeft') changeLightboxSample(-1);
+            if (e.key === 'ArrowRight') changeLightboxSample(1);
+        });
+    </script>
+</body>
+</html>

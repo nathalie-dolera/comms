@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000">
+  <defs>
+    <linearGradient id="posterGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4a1212"/>
+      <stop offset="50%" stop-color="#7a2323"/>
+      <stop offset="100%" stop-color="#2d0a0a"/>
+    </linearGradient>
+    <filter id="pShadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <rect width="800" height="1000" fill="#2d0a0a"/>
+  <!-- Poster Body -->
+  <rect x="30" y="30" width="740" height="940" fill="url(#posterGrad)" rx="8" stroke="#d4847e" stroke-width="2" filter="url(#pShadow)"/>
+  
+  <!-- Outer border ornament -->
+  <rect x="50" y="50" width="700" height="900" fill="none" stroke="#e0c29f" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <rect x="58" y="58" width="684" height="884" fill="none" stroke="#e0c29f" stroke-width="0.75"/>
+
+  <!-- Top Banner -->
+  <text x="400" y="140" font-family="'Special Elite', monospace" font-size="14" fill="#e0c29f" letter-spacing="4" text-anchor="middle">COLLEGE OF COMPUTER STUDIES PRESENTS</text>
+  <line x1="200" y1="160" x2="600" y2="160" stroke="#d4847e" stroke-width="1"/>
+
+  <!-- Main Headline -->
+  <text x="400" y="240" font-family="'Playfair Display', Georgia, serif" font-size="52" font-weight="900" fill="#ffffff" text-anchor="middle">ANNUAL TECH</text>
+  <text x="400" y="305" font-family="'Playfair Display', Georgia, serif" font-size="56" font-weight="900" fill="#fdf0d5" letter-spacing="2" text-anchor="middle">SUMMIT 2026</text>
+  <text x="400" y="345" font-family="'Dancing Script', cursive" font-size="28" fill="#d4847e" text-anchor="middle">Innovate, Build, and Transform</text>
+
+  <!-- Illustration Card Center -->
+  <rect x="120" y="380" width="560" height="260" rx="8" fill="#1f0707" stroke="#8c2e28" stroke-width="1.5"/>
+  <circle cx="400" cy="480" r="60" fill="none" stroke="#d4847e" stroke-width="2"/>
+  <circle cx="400" cy="480" r="40" fill="#6b1814"/>
+  <polygon points="400,445 425,480 400,515 375,480" fill="#fdf0d5"/>
+  <text x="400" y="580" font-family="'Special Elite', monospace" font-size="13" fill="#e0c29f" text-anchor="middle" letter-spacing="2">KEYNOTE SPEAKERS • CODE FEST • TECH EXPO</text>
+  <text x="400" y="605" font-family="sans-serif" font-size="11" fill="#bbb" text-anchor="middle">Over 500+ student delegates &amp; industry partners</text>
+
+  <!-- Event Details Boxes -->
+  <rect x="120" y="670" width="170" height="90" rx="4" fill="#3a0d0d" stroke="#6b1814"/>
+  <text x="205" y="700" font-family="'Special Elite', monospace" font-size="11" fill="#d4847e" text-anchor="middle">DATE</text>
+  <text x="205" y="728" font-family="'Playfair Display', serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">NOV 28, 2026</text>
+  <text x="205" y="746" font-family="sans-serif" font-size="10" fill="#bbb" text-anchor="middle">Saturday • 9:00 AM</text>
+
+  <rect x="315" y="670" width="170" height="90" rx="4" fill="#3a0d0d" stroke="#6b1814"/>
+  <text x="400" y="700" font-family="'Special Elite', monospace" font-size="11" fill="#d4847e" text-anchor="middle">VENUE</text>
+  <text x="400" y="728" font-family="'Playfair Display', serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">GRAND AUDITORIUM</text>
+  <text x="400" y="746" font-family="sans-serif" font-size="10" fill="#bbb" text-anchor="middle">Main Campus Building</text>
+
+  <rect x="510" y="670" width="170" height="90" rx="4" fill="#3a0d0d" stroke="#6b1814"/>
+  <text x="595" y="700" font-family="'Special Elite', monospace" font-size="11" fill="#d4847e" text-anchor="middle">ADMISSION</text>
+  <text x="595" y="728" font-family="'Playfair Display', serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">FREE ENTRANCE</text>
+  <text x="595" y="746" font-family="sans-serif" font-size="10" fill="#bbb" text-anchor="middle">Registration Required</text>
+
+  <!-- Footer -->
+  <line x1="120" y1="800" x2="680" y2="800" stroke="#d4847e" stroke-width="0.8"/>
+  <text x="400" y="845" font-family="'Special Elite', monospace" font-size="13" fill="#ffffff" text-anchor="middle">SECURE YOUR PASS AT: WWW.TECHSUMMIT2026.ORG</text>
+  <text x="400" y="885" font-family="'Dancing Script', cursive" font-size="18" fill="#e0c29f" text-anchor="middle">Graphic Design Commission • Layout &amp; Event Branding</text>
+</svg>

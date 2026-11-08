@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Thalie - Portfolio</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        .about-wrapper {
+            max-width: 1050px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+
+        .about-public-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            width: 100%;
+            align-items: stretch;
+            box-sizing: border-box;
+        }
+        .about-public-grid .paper-note {
+            width: 100%;
+            height: 100%;
+            min-height: 280px;
+            padding: 30px 34px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        @media (max-width: 900px) {
+            .about-public-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page-background"></div>
+
+    <!-- Navigation -->
+    <nav class="top-nav">
+        <a href="../index.html">Home</a>
+        <a href="about.html" class="active">About</a>
+        <a href="output.html">Output</a>
+        <a href="feedback.html">Feedback</a>
+        <a href="terms.html">T &amp; C</a>
+        <a href="form.html">Form</a>
+        <a href="tracker.html">Tracker &amp; Slots</a>
+    </nav>
+
+    <div class="about-page" style="padding-top: 85px; padding-bottom: 70px;">
+        <div class="about-wrapper">
+
+            <!-- 2-Column Responsive Grid (Left / Right) matching T&C -->
+            <div id="about-cards-container" class="about-public-grid">
+                <!-- Injected via JS -->
+            </div>
+
+            <!-- Contact Information Footer Card (Full length matching 2 columns) -->
+            <div id="about-contact-card" style="display: none; margin-top: 30px; width: 100%; box-sizing: border-box;">
+                <div class="contact-footer" style="margin: 0; background: #fdfaf6; border: 1px solid #dcd0c2; box-shadow: 0 4px 15px rgba(0,0,0,0.12); padding: 25px 32px; border-radius: 6px;">
+                    <div id="about-contact-links" style="display: flex; flex-direction: column; gap: 8px;">
+                        <!-- Injected via JS -->
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="../js/storage.js"></script>
+    <script>
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function getAboutSections(data) {
+            if (!data) return [];
+            if (data.sections && Array.isArray(data.sections)) return data.sections;
+            return [];
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const data = Storage.get(Storage.KEYS.ABOUT, null);
+            const sections = getAboutSections(data);
+            const container = document.getElementById('about-cards-container');
+
+            if (container && sections.length) {
+                const validSections = sections.filter(s => (s.title && s.title.trim()) || (s.items && s.items.length) || s.image);
+
+                container.innerHTML = validSections.map(sec => {
+                    const cardStyle = 'background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18); backdrop-filter: blur(5px); box-shadow: 0 4px 15px rgba(0,0,0,0.2); padding: 30px 34px; border-radius: 6px; color: #fff; height: 100%; min-height: 280px; box-sizing: border-box; display: flex; flex-direction: column;';
+                    const titleStyle = "font-family:'Special Elite', monospace; font-size: 19px; text-transform: uppercase; color: #f2a6a0; letter-spacing: 2px; margin-bottom: 8px; margin-top: 0;";
+                    const subtitleStyle = 'font-style: italic; font-size: 13.5px; color: #e8d0cb; margin-bottom: 14px; margin-top: 0;';
+                    const listColor = 'color: #f8efe6;';
+
+                    // Inner text markup
+                    const textContent = `
+                        ${sec.title ? `<h3 style="${titleStyle}">${escapeHtml(sec.title)}</h3>` : ''}
+                        ${sec.subtitle ? `<p style="${subtitleStyle}">${escapeHtml(sec.subtitle)}</p>` : ''}
+                        ${sec.items && sec.items.length ? `
+                            <ul style="list-style: disc; padding-left: 22px; ${listColor} font-size: 13.5px; line-height: 1.85; margin: 0; flex: 1;">
+                                ${sec.items.map(p => `<li>${escapeHtml(p)}</li>`).join('')}
+                            </ul>
+                        ` : ''}
+                    `;
+
+                    // If image exists
+                    if (sec.image) {
+                        return `
+                            <div class="paper-note" style="margin-bottom: 0; ${cardStyle}">
+                                <div style="display: flex; gap: 20px; align-items: flex-start; height: 100%; flex: 1;">
+                                    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100%;">
+                                        ${textContent}
+                                    </div>
+                                    <div style="flex-shrink: 0; text-align: center;">
+                                        <img src="${escapeHtml(sec.image)}" alt="${escapeHtml(sec.title || 'Image')}" style="max-width: 140px; max-height: 180px; object-fit: cover; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.3); display: block;">
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    return `
+                        <div class="paper-note" style="margin-bottom: 0; ${cardStyle}">
+                            ${textContent}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Contact Links
+            const contactContainer = document.getElementById('about-contact-links');
+            const contactCard = document.getElementById('about-contact-card');
+            if (contactContainer && data) {
+                let contacts = [];
+                if (data.contacts && Array.isArray(data.contacts) && data.contacts.length > 0) {
+                    contacts = data.contacts;
+                } else if (data.contact) {
+                    if (data.contact.gmail) contacts.push({ channel: 'Gmail', value: data.contact.gmail });
+                    if (data.contact.telegram) contacts.push({ channel: 'Telegram', value: data.contact.telegram });
+                }
+
+                // Only show card if there are actual contacts
+                if (contacts.length === 0) {
+                    if (contactCard) contactCard.style.display = 'none';
+                } else {
+                    if (contactCard) contactCard.style.display = 'block';
+
+                    contactContainer.innerHTML = contacts.map(c => {
+                        let linkHref = '';
+                        const ch = (c.channel || '').toLowerCase();
+                        const val = c.value || '';
+                        
+                        if (ch.includes('gmail') || ch.includes('email')) {
+                            linkHref = val.startsWith('mailto:') ? val : 'mailto:' + val;
+                        } else if (ch.includes('telegram')) {
+                            const clean = val.replace('@', '').replace('https://t.me/', '');
+                            linkHref = 'https://t.me/' + clean;
+                        } else if (ch.includes('facebook') || ch.includes('fb')) {
+                            linkHref = val.startsWith('http') ? val : 'https://facebook.com/' + val.replace('@', '');
+                        } else if (ch.includes('instagram')) {
+                            linkHref = val.startsWith('http') ? val : 'https://instagram.com/' + val.replace('@', '');
+                        } else if (ch.includes('twitter') || ch.includes('x')) {
+                            linkHref = val.startsWith('http') ? val : 'https://x.com/' + val.replace('@', '');
+                        } else if (ch.includes('tiktok')) {
+                            linkHref = val.startsWith('http') ? val : 'https://tiktok.com/@' + val.replace('@', '');
+                        } else if (val.startsWith('http://') || val.startsWith('https://')) {
+                            linkHref = val;
+                        }
+
+                        if (linkHref) {
+                            return `<p style="margin: 3px 0; font-size: 13.5px;"><strong>${escapeHtml(c.channel)}:</strong> <a href="${escapeHtml(linkHref)}" target="_blank" style="color: var(--maroon, #8b2622); text-decoration: underline; font-weight: 500;">${escapeHtml(val)}</a></p>`;
+                        } else {
+                            return `<p style="margin: 3px 0; font-size: 13.5px;"><strong>${escapeHtml(c.channel)}:</strong> <span style="color: #4a2824;">${escapeHtml(val)}</span></p>`;
+                        }
+                    }).join('');
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thalie's Portfolio</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .admin-corner-link {
+            position: fixed;
+            bottom: 16px;
+            right: 18px;
+            background: var(--maroon-dark);
+            border: 1px solid var(--rose);
+            color: var(--rose-light);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-family: 'Special Elite', monospace;
+            text-decoration: none;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            z-index: 100;
+        }
+
+        .admin-corner-link:hover {
+            background: var(--maroon);
+            color: #fff;
+            border-color: var(--rose);
+        }
+
+        .nav-buttons-expanded {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            width: 100%;
+            max-width: 380px;
+        }
+
+        .nav-btn-highlight {
+            background: var(--paper-warm) !important;
+            border: 1px solid var(--rose);
+        }
+    </style>
+</head>
+<body>
+    <!-- Background -->
+    <div class="page-background"></div>
+
+    <!-- Discreet Portal Link -->
+    <a href="admin/index.html" class="admin-corner-link">Commissioner Portal</a>
+
+    <!-- Main Folder -->
+    <div class="folder-container">
+        <div class="folder">
+
+            <!-- Folder Content -->
+            <div class="folder-content">
+
+                <!-- Polaroid Photo -->
+                <a href="pages/about.html" style="text-decoration:none;" title="About Me">
+                    <div class="polaroid">
+                        <div class="paperclip"></div>
+                        <div class="polaroid-image">
+                            <img id="polaroid-profile-img" src="assets/images/default-person.svg" alt="Profile Photo">
+                        </div>
+                        <span class="polaroid-label">about me</span>
+                    </div>
+                </a>
+
+                <!-- Right Side -->
+                <div class="folder-right">
+                    <h1 class="portfolio-title" id="home-portfolio-title">YOUR NAME<br>PORTFOLIO</h1>
+
+                    <!-- Navigation Buttons -->
+                    <div class="nav-buttons nav-buttons-expanded">
+                        <a href="pages/output.html" class="nav-btn">Output</a>
+                        <a href="pages/feedback.html" class="nav-btn">Feedback</a>
+                        <a href="pages/terms.html" class="nav-btn">T &amp; C</a>
+                        <a href="pages/form.html" class="nav-btn">Form</a>
+                        <a href="pages/form.html#additional-payment" class="nav-btn">Submit Payment</a>
+                        <a href="pages/tracker.html" class="nav-btn nav-btn-highlight">Status &amp; Slots</a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="js/storage.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Update Title if custom set
+            const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, null);
+            const titleEl = document.getElementById('home-portfolio-title');
+            if (titleEl && settings && settings.portfolioTitle) {
+                titleEl.innerHTML = settings.portfolioTitle.replace(/\n/g, '<br>');
+            }
+
+            const polaroidImg = document.getElementById('polaroid-profile-img');
+            if (!polaroidImg) return;
+
+            // 1. Check logged-in admin session
+            const session = Storage.get(Storage.KEYS.ADMIN_SESSION, null);
+            if (session && session.avatar) {
+                polaroidImg.src = session.avatar;
+                return;
+            }
+
+            // 2. Check registered commissioner accounts for custom avatar
+            const users = Storage.get(Storage.KEYS.ADMIN_USERS, []);
+            if (Array.isArray(users) && users.length > 0) {
+                const userWithAvatar = users.slice().reverse().find(u => u.avatar && typeof u.avatar === 'string' && u.avatar.trim().length > 0);
+                if (userWithAvatar) {
+                    polaroidImg.src = userWithAvatar.avatar;
+                    return;
+                }
+            }
+
+            // Default fallback is person icon
+            polaroidImg.src = 'assets/images/default-person.svg';
+        });
+    </script>
+</body>
+</html>

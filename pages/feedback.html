@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Feedback - Thalie's Portfolio</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        .feedback-container {
+            max-width: 1050px;
+            margin: 0 auto;
+            padding: 85px 20px 50px;
+        }
+
+        .feedback-header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .feedback-header h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 42px;
+            color: var(--paper-cream);
+        }
+
+        .feedback-header p {
+            font-family: 'Special Elite', monospace;
+            color: var(--rose-light);
+            font-size: 15px;
+            letter-spacing: 1px;
+            margin-top: 6px;
+        }
+
+        /* Top Action Bar */
+        .feedback-action-bar {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 25px;
+        }
+
+        .upload-review-btn {
+            background: var(--paper-cream);
+            color: var(--maroon-dark);
+            border: none;
+            padding: 10px 22px;
+            font-family: 'Special Elite', monospace;
+            font-size: 13px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 2px 4px 10px var(--shadow-dark);
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .upload-review-btn:hover {
+            background: var(--paper-warm);
+            transform: translateY(-2px);
+        }
+
+        /* Feedback Image Grid */
+        .feedback-img-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 30px;
+        }
+
+        /* Review Card styled as pinned photo card */
+        .review-card {
+            background: #fff;
+            padding: 15px 15px 20px 15px;
+            border-radius: 4px;
+            box-shadow: 0 10px 25px var(--shadow-dark);
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .review-card:nth-child(even) {
+            transform: rotate(1deg);
+        }
+
+        .review-card:nth-child(odd) {
+            transform: rotate(-1.5deg);
+        }
+
+        .review-card:hover {
+            transform: scale(1.03) rotate(0deg) !important;
+            box-shadow: 0 16px 35px rgba(0, 0, 0, 0.5);
+            z-index: 10;
+        }
+
+        /* Pushpin */
+        .review-pin {
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 16px;
+            height: 16px;
+            background: radial-gradient(circle at 40% 40%, #e74c3c, #900);
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+            z-index: 2;
+        }
+
+        .review-img-box {
+            width: 100%;
+            height: 210px;
+            background: #fbf8f3;
+            border: 1px solid #ebdcd0;
+            border-radius: 3px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 6px;
+            box-sizing: border-box;
+        }
+
+        .review-img-box img {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .review-content {
+            padding-top: 14px;
+            text-align: center;
+        }
+
+        .review-stars {
+            color: #f1c40f;
+            font-size: 16px;
+            margin-bottom: 6px;
+        }
+
+        .review-client {
+            font-family: 'Playfair Display', serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--maroon-dark);
+        }
+
+        .review-project {
+            font-family: 'Special Elite', monospace;
+            font-size: 11px;
+            color: var(--rose);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .review-quote {
+            font-size: 13px;
+            color: var(--text-body);
+            font-style: italic;
+            line-height: 1.5;
+        }
+
+        /* Lightbox Modal */
+        .lightbox-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(5px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: 20px;
+        }
+
+        .lightbox-modal.active {
+            display: flex;
+        }
+
+        .lightbox-content {
+            max-width: 85vw;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .lightbox-content img {
+            max-width: 100%;
+            max-height: 75vh;
+            object-fit: contain;
+            border-radius: 6px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+        }
+
+        .lightbox-caption {
+            color: white;
+            margin-top: 15px;
+            text-align: center;
+            font-family: 'Playfair Display', serif;
+            font-size: 18px;
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 25px;
+            right: 30px;
+            color: white;
+            font-size: 32px;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        /* Upload Client Feedback Modal */
+        .upload-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1500;
+            padding: 20px;
+        }
+
+        .upload-modal.active {
+            display: flex;
+        }
+
+        .upload-box {
+            background: var(--paper-cream);
+            padding: 30px;
+            border-radius: 6px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page-background"></div>
+
+    <!-- Navigation -->
+    <nav class="top-nav">
+        <a href="../index.html">Home</a>
+        <a href="about.html">About</a>
+        <a href="output.html">Output</a>
+        <a href="feedback.html" class="active">Feedback</a>
+        <a href="terms.html">T &amp; C</a>
+        <a href="form.html">Form</a>
+        <a href="tracker.html">Tracker &amp; Slots</a>
+    </nav>
+
+    <div class="feedback-container">
+        <div class="feedback-header">
+            <h1>Client Feedback &amp; Proofs</h1>
+            <p>Screenshot proof and reviews from satisfied clients</p>
+            <div style="margin-top: 18px; text-align: center;">
+                <button class="upload-review-btn" onclick="openClientUploadModal()">+ Submit Feedback Image</button>
+            </div>
+        </div>
+
+        <!-- Feedback Grid -->
+        <div class="feedback-img-grid" id="feedback-grid-display">
+            <!-- Injected via JS -->
+        </div>
+    </div>
+
+    <!-- Lightbox Modal -->
+    <div class="lightbox-modal" id="lightbox-modal" onclick="closeLightbox()">
+        <button class="lightbox-close">&times;</button>
+        <div class="lightbox-content" onclick="event.stopPropagation()">
+            <img id="lightbox-img" src="" alt="Feedback Full Preview">
+            <div id="lightbox-caption" class="lightbox-caption"></div>
+        </div>
+    </div>
+
+    <!-- Upload Feedback Modal for Client -->
+    <div class="upload-modal" id="client-upload-modal">
+        <div class="upload-box">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 18px;">
+                <h3 style="font-family:'Playfair Display', serif; font-size:22px; color:var(--maroon-dark);">Leave
+                    Feedback</h3>
+                <button onclick="closeClientUploadModal()"
+                    style="border:none; background:none; font-size:22px; cursor:pointer;">&times;</button>
+            </div>
+
+            <form onsubmit="handleClientFeedbackSubmit(event)">
+                <div class="form-group">
+                    <label>Client Name</label>
+                    <input type="text" id="c-fb-name" required
+                        placeholder="e.g. Maria Santos (will display as M•••• S.)">
+                </div>
+                <div class="form-group">
+                    <label>Project Commissioned</label>
+                    <input type="text" id="c-fb-project" required placeholder="e.g. Infographics, Website, Reviewer">
+                </div>
+                <div class="form-group">
+                    <label>Screenshot / Proof Photo (Optional)</label>
+                    <input type="file" id="c-fb-file" accept="image/*" onchange="handlePreviewClientFile(event)">
+                    <div id="c-fb-preview"
+                        style="margin-top: 8px; max-height: 140px; overflow:hidden; border-radius:4px; display:none;">
+                        <img id="c-fb-img-tag" src="" style="width:100%; object-fit:contain;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Client Feedback</label>
+                    <textarea id="c-fb-notes" placeholder="Enter your feedback here..."
+                        style="min-height: 70px;"></textarea>
+                </div>
+
+                <button type="submit" class="submit-btn">Post Feedback</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="../js/storage.js"></script>
+    <script>
+        let clientBase64Img = '';
+
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function formatGCashName(fullName) {
+            if (!fullName) return 'Anonymous';
+            const parts = fullName.trim().split(/\s+/);
+            if (parts.length === 1) {
+                const first = parts[0];
+                if (first.length <= 1) return first;
+                return first[0] + '••••';
+            }
+            const firstName = parts[0];
+            const lastName = parts[parts.length - 1];
+            const maskedFirst = firstName.length > 1 ? firstName[0] + '••••' : firstName;
+            const initialLast = lastName[0].toUpperCase() + '.';
+            return `${maskedFirst} ${initialLast}`;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderFeedbacks();
+        });
+
+        function renderFeedbacks() {
+            const list = Storage.get(Storage.KEYS.FEEDBACKS, []);
+            const container = document.getElementById('feedback-grid-display');
+            if (!container) return;
+
+            if (list.length === 0) {
+                container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--paper-cream); padding: 50px;">No feedback images available yet.</div>';
+                return;
+            }
+
+            const defaultImg = Storage.getDefaultFeedbackImage();
+
+            container.innerHTML = list.map(item => {
+                const proofImg = item.imageUrl || defaultImg;
+                const resolvedSrc = Storage.resolveAssetPath(proofImg);
+                return `
+                <div class="review-card" onclick="openFeedbackById('${escapeHtml(item.id)}')">
+                    <div class="review-pin"></div>
+                    <div class="review-img-box">
+                        <img src="${escapeHtml(resolvedSrc)}" alt="Review by ${escapeHtml(formatGCashName(item.clientName))}">
+                    </div>
+                    <div class="review-content">
+                        <div class="review-client">${escapeHtml(formatGCashName(item.clientName))}</div>
+                        <div class="review-project">${escapeHtml(item.project || 'Commission')}</div>
+                        ${item.notes ? `
+                            <div style="margin-top: 8px; background: #fdf8f4; border: 1px solid #ebdccf; border-radius: 6px; padding: 7px 10px; font-size: 12px; color: #2a0e0e; line-height: 1.4;">
+                                <span style="font-size: 9.5px; font-family:'Special Elite', monospace; color: var(--maroon); text-transform: uppercase; display: block; margin-bottom: 2px;">Client Feedback:</span>
+                                ${escapeHtml(item.notes)}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        // Lightbox by ID
+        function openFeedbackById(id) {
+            const list = Storage.get(Storage.KEYS.FEEDBACKS, []);
+            const item = list.find(f => f.id === id);
+            if (!item) return;
+
+            const defaultImg = Storage.getDefaultFeedbackImage();
+            const imgSrc = Storage.resolveAssetPath(item.imageUrl || defaultImg);
+            const clientName = formatGCashName(item.clientName);
+
+            document.getElementById('lightbox-img').src = imgSrc;
+            document.getElementById('lightbox-caption').textContent = `${clientName} — ${item.project || 'Commission'}`;
+            document.getElementById('lightbox-modal').classList.add('active');
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox-modal').classList.remove('active');
+        }
+
+        // Client upload modal
+        function openClientUploadModal() {
+            clientBase64Img = '';
+            document.getElementById('client-upload-modal').classList.add('active');
+        }
+
+        function closeClientUploadModal() {
+            document.getElementById('client-upload-modal').classList.remove('active');
+        }
+
+        function handlePreviewClientFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                clientBase64Img = e.target.result;
+                const preview = document.getElementById('c-fb-preview');
+                const img = document.getElementById('c-fb-img-tag');
+                img.src = clientBase64Img;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleClientFeedbackSubmit(event) {
+            event.preventDefault();
+            const list = Storage.get(Storage.KEYS.FEEDBACKS, []);
+
+            const newReview = {
+                id: 'fb-' + Date.now(),
+                clientName: document.getElementById('c-fb-name').value,
+                project: document.getElementById('c-fb-project').value,
+                notes: document.getElementById('c-fb-notes').value,
+                date: new Date().toISOString().split('T')[0],
+                imageUrl: clientBase64Img
+            };
+
+            list.unshift(newReview);
+            Storage.set(Storage.KEYS.FEEDBACKS, list);
+            if (clientBase64Img) {
+                Storage.set(Storage.KEYS.DEFAULT_FEEDBACK_IMAGE, clientBase64Img);
+            }
+            closeClientUploadModal();
+            renderFeedbacks();
+            alert('Thank you for submitting your feedback screenshot!');
+        }
+    </script>
+</body>
+
+</html>

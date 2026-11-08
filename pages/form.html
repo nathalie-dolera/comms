@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Commission Form - Thalie's Portfolio</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        .success-box {
+            display: none;
+            background: #fff;
+            padding: 35px 25px;
+            border-radius: 6px;
+            text-align: center;
+            box-shadow: 0 10px 30px var(--shadow-dark);
+            margin-top: 20px;
+        }
+
+        .success-icon {
+            font-size: 50px;
+            margin-bottom: 12px;
+        }
+
+        .success-id {
+            display: inline-block;
+            background: #f7ebe8;
+            color: var(--maroon);
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 20px;
+            font-weight: 700;
+            font-family: 'Special Elite', monospace;
+            margin: 15px 0;
+            border: 1px dashed var(--rose);
+        }
+    </style>
+</head>
+<body>
+    <div class="page-background"></div>
+
+    <!-- Navigation -->
+    <nav class="top-nav">
+        <a href="../index.html">Home</a>
+        <a href="about.html">About</a>
+        <a href="output.html">Output</a>
+        <a href="feedback.html">Feedback</a>
+        <a href="terms.html">T &amp; C</a>
+        <a href="form.html" class="active">Form</a>
+        <a href="tracker.html">Tracker &amp; Slots</a>
+    </nav>
+
+    <div class="page-placeholder" style="padding-top: 75px; padding-bottom: 50px;">
+        <h1>Commission Form</h1>
+        <p>Fill out the form below to request a commission</p>
+
+        <div class="form-container">
+            <div class="commission-form" id="commission-form-card">
+                <h2 id="commission-form-mode-title">Request a Commission</h2>
+                <button type="button" id="commission-form-mode-toggle" class="submit-btn" style="margin: 0 0 18px; background: var(--maroon-dark);" onclick="toggleAdditionalPaymentForm()">Submit Full Payment</button>
+
+                <form id="additional-payment-form" onsubmit="submitAdditionalPayment(event)" style="display:none; margin-bottom:24px; padding:18px; background:var(--paper-warm); border:1px dashed var(--rose); border-radius:6px;">
+                    <p style="font-size:13px;color:#7a5048;">Upload proof of your full or remaining payment for an existing commission.</p>
+                    <div class="form-group">
+                        <label for="additional-payment-client">Client Name</label>
+                        <input id="additional-payment-client" type="text" required placeholder="Enter the name used for your commission">
+                    </div>
+                    <div class="form-group">
+                        <label for="additional-payment-receipt">Payment Screenshot</label>
+                        <input id="additional-payment-receipt" type="file" accept="image/*" required>
+                    </div>
+                    <div style="display:flex;gap:10px;">
+                        <button type="submit" class="submit-btn" style="margin:0;">Submit Full Payment</button>
+                    </div>
+                    <p id="additional-payment-message" role="status" style="display:none;margin:12px 0 0;color:var(--maroon-dark);"></p>
+                </form>
+
+                <form id="client-comm-form" onsubmit="handleCommissionSubmit(event)">
+                    <div class="form-group">
+                        <label for="name">Client Name</label>
+                        <input type="text" id="name" name="name" placeholder="Enter client name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Where to Turnover the Output</label>
+                        <input type="text" id="email" name="email" placeholder="e.g. Gmail: your@email.com, Telegram: @handle, Google Drive, etc." required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Contact Channel</label>
+                        <div style="display: grid; grid-template-columns: 140px 1fr; gap: 10px;">
+                            <select id="contact-channel" name="contact-channel">
+                                <option value="Facebook">Facebook</option>
+                                <option value="Telegram">Telegram</option>
+                                <option value="Email">Email</option>
+                                <option value="Instagram">Instagram</option>
+                                <option value="Discord">Discord</option>
+                                <option value="Twitter/X">Twitter / X</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <input type="text" id="contact-account" name="contact-account" placeholder="Account name or username" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="service">Type of Service</label>
+                        <select id="service" name="service" required>
+                            <option value="" disabled selected>Select a service</option>
+                            <option value="Custom Project">Other (specify below)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">Project Description</label>
+                        <textarea id="description" name="description" placeholder="Describe what you need, including details, instructions, references, or specific requirements..." required></textarea>
+                    </div>
+
+                    <!-- Upload Files to be Commissioned -->
+                    <div class="form-group">
+                        <label for="commission-files" style="font-family:'Special Elite', monospace; font-size: 13px; text-transform: uppercase; color: var(--maroon-dark); letter-spacing: 1px;">
+                            Upload Files to be Commissioned
+                        </label>
+                        <p style="font-size: 12px; color: #7a5048; margin-top: 2px; margin-bottom: 8px; font-style: italic;">
+                            Attach documents, reviewer guidelines, drafts, slides, or reference materials that need to be worked on:
+                        </p>
+                        <input type="file" id="commission-files" multiple onchange="handleCommissionFilesUpload(event)" style="background: #ffffff;">
+                        <div id="commission-files-preview" style="margin-top: 8px; font-size: 12px; color: var(--maroon); font-family: 'Special Elite', monospace;"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="deadline">Preferred Deadline</label>
+                        <input type="date" id="deadline" name="deadline">
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group">
+                            <label for="agreed-price">Agreed Project Price (₱)</label>
+                            <input type="number" id="agreed-price" name="agreed-price" min="0" step="any" placeholder="e.g. 1000" oninput="autoDetectPaymentStatus()" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="amount-paid">Amount Paid in Receipt (₱)</label>
+                            <input type="number" id="amount-paid" name="amount-paid" min="0" step="any" placeholder="e.g. 500 or 1000" oninput="autoDetectPaymentStatus()" required>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div class="form-group">
+                            <label for="payment">Mode of Payment</label>
+                            <select id="payment" name="payment" onchange="toggleClientPaymentOther(this.value)">
+                                <option value="gcash" selected>GCash</option>
+                                <option value="maya">Maya</option>
+                                <option value="paypal">PayPal</option>
+                                <option value="maribank">Maribank</option>
+                                <option value="other">Other (specify)</option>
+                            </select>
+                            <input type="text" id="payment-other-input" placeholder="Type payment method (e.g. BDO, BPI, Cash)" style="display:none; margin-top:8px;">
+                        </div>
+                        <div class="form-group">
+                            <label for="payment-type">Payment Status Detected</label>
+                            <select id="payment-type" name="payment-type">
+                                <option value="downpayment" selected>50% DP</option>
+                                <option value="fully_paid">Fully Paid</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Payment Proof Section (Downpayment / Fully Paid) -->
+                    <div class="gcash-payment-card" style="background: #eef6fc; border: 2px dashed #007dfe; border-radius: 6px; padding: 18px; margin-bottom: 20px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="downpayment-receipt" style="color: #0056b3; font-weight: 700; font-family: 'Special Elite', monospace; font-size: 13.5px; display: block; margin-bottom: 8px;">
+                                Upload Proof of Payment Screenshot (Downpayment / Fully Paid)
+                            </label>
+                            <input type="file" id="downpayment-receipt" accept="image/*" onchange="previewDownpaymentReceipt(event)" style="background: white; border-color: #90caf9;">
+                            <div id="receipt-preview-wrap" style="display: none; margin-top: 10px; text-align: center; background: white; padding: 10px; border-radius: 4px; border: 1px solid #bce0fd;">
+                                <img id="receipt-preview-img" src="" alt="Proof of Payment" style="max-height: 160px; max-width: 100%; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                <div style="font-size: 11px; color: #28a745; margin-top: 4px; font-weight: 600; font-family:'Special Elite', monospace;">Screenshot Attached</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="submit-btn">Request a Commission</button>
+                </form>
+            </div>
+
+            <!-- SUCCESS CONFIRMATION BOX -->
+            <div class="success-box" id="form-success-box">
+                <div class="success-icon" style="font-size: 32px; color: var(--rose); font-family: 'Special Elite', monospace;">
+                    <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <h2 style="font-family:'Playfair Display', serif; color: var(--maroon-dark); font-size: 26px;">Commission Submitted!</h2>
+                <p style="color: #666; font-size: 14px; margin-top: 8px;">Thank you! Your request and downpayment proof have been sent to Thalie's queue.</p>
+                
+                <div>
+                    <span style="display:block; font-size:12px; text-transform:uppercase; color:#999; margin-top: 15px;">Your Commission Tracking ID</span>
+                    <div class="success-id" id="assigned-comm-id">COM-1005</div>
+                </div>
+
+                <p style="font-size: 13px; color: #555; margin-bottom: 20px;">Save this ID to check your live commission progress anytime!</p>
+
+                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                    <a id="track-direct-link" href="tracker.html" class="nav-btn" style="text-decoration:none;">Track My Commission Status →</a>
+                    <button onclick="resetCommissionForm()" class="nav-btn" style="background:#fff; border:1px solid #ccc;">Submit Another</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/storage.js"></script>
+    <script>
+        if (window.location.hash === '#additional-payment') toggleAdditionalPaymentForm(true);
+        let tempReceiptBase64 = '';
+        let uploadedCommissionFiles = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            populateServiceDropdown();
+        });
+
+        function populateServiceDropdown() {
+            const select = document.getElementById('service');
+            if (!select) return;
+            const services = Storage.get(Storage.KEYS.SERVICES, []);
+
+            let html = '<option value="" disabled selected>Select a service</option>';
+
+            if (services && services.length > 0) {
+                // Group services by category
+                const grouped = {};
+                services.forEach(s => {
+                    const cat = s.category || 'General Services';
+                    if (!grouped[cat]) grouped[cat] = [];
+                    grouped[cat].push(s.name);
+                });
+
+                Object.keys(grouped).forEach(cat => {
+                    html += `<optgroup label="${cat}">`;
+                    grouped[cat].forEach(name => {
+                        html += `<option value="${name}">${name}</option>`;
+                    });
+                    html += '</optgroup>';
+                });
+            }
+
+            html += '<option value="Custom Project">Other (specify below)</option>';
+            select.innerHTML = html;
+        }
+
+        function previewDownpaymentReceipt(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                tempReceiptBase64 = e.target.result;
+                const wrap = document.getElementById('receipt-preview-wrap');
+                const img = document.getElementById('receipt-preview-img');
+                if (img) img.src = tempReceiptBase64;
+                if (wrap) wrap.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleCommissionFilesUpload(event) {
+            const files = event.target.files;
+            const previewEl = document.getElementById('commission-files-preview');
+            uploadedCommissionFiles = [];
+            if (!files || files.length === 0) {
+                if (previewEl) previewEl.innerHTML = '';
+                return;
+            }
+
+            const names = Array.from(files).map(f => {
+                uploadedCommissionFiles.push({
+                    name: f.name,
+                    size: (f.size / 1024).toFixed(1) + ' KB',
+                    type: f.type || 'Document'
+                });
+                return f.name;
+            });
+
+            if (previewEl) {
+                previewEl.innerHTML = `Attached ${names.length} file(s): ` + names.join(', ');
+            }
+        }
+
+        function autoDetectPaymentStatus() {
+            const agreedEl = document.getElementById('agreed-price');
+            const paidEl = document.getElementById('amount-paid');
+            const payTypeSelect = document.getElementById('payment-type');
+            if (!payTypeSelect) return;
+
+            const agreed = parseFloat(agreedEl?.value) || 0;
+            const paid = parseFloat(paidEl?.value) || 0;
+
+            if (paid >= agreed && agreed > 0) {
+                payTypeSelect.value = 'fully_paid';
+            } else {
+                payTypeSelect.value = 'downpayment';
+            }
+        }
+
+        function toggleClientPaymentOther(val) {
+            const input = document.getElementById('payment-other-input');
+            if (input) {
+                if (val === 'other') {
+                    input.style.display = 'block';
+                    input.focus();
+                } else {
+                    input.style.display = 'none';
+                }
+            }
+        }
+
+        function handleCommissionSubmit(event) {
+            event.preventDefault();
+
+            const list = Storage.get(Storage.KEYS.SUBMISSIONS, []);
+            const newId = 'COM-' + (1000 + list.length + 1);
+
+            const channel = document.getElementById('contact-channel')?.value || 'Contact';
+            const account = document.getElementById('contact-account')?.value.trim() || '';
+            const fullContact = account ? `${channel}: ${account}` : '';
+
+            let paymentVal = document.getElementById('payment').value;
+            if (paymentVal === 'other') {
+                const customPay = document.getElementById('payment-other-input')?.value.trim();
+                paymentVal = customPay || 'Other';
+            }
+
+            const agreedPrice = parseFloat(document.getElementById('agreed-price')?.value) || 0;
+            const amountPaid = parseFloat(document.getElementById('amount-paid')?.value) || 0;
+            const balanceDue = Math.max(0, agreedPrice - amountPaid);
+            const isFull = (amountPaid >= agreedPrice && agreedPrice > 0);
+            const detectedOption = isFull ? 'fully_paid' : 'downpayment';
+
+            const newComm = {
+                id: newId,
+                name: document.getElementById('name').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                contact: fullContact,
+                service: document.getElementById('service').value,
+                category: 'Client Request',
+                description: document.getElementById('description').value.trim(),
+                deadline: document.getElementById('deadline').value,
+                agreedPrice: agreedPrice,
+                amountPaid: amountPaid,
+                balance: balanceDue,
+                payment: paymentVal,
+                paymentType: detectedOption,
+                downpaymentReceipt: tempReceiptBase64,
+                referenceFiles: uploadedCommissionFiles,
+                status: 'Accepted',
+                submittedAt: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            };
+
+            list.unshift(newComm);
+            Storage.set(Storage.KEYS.SUBMISSIONS, list);
+
+            // Also record in Payment Tracker sheet with AI Verification data
+            const payments = Storage.get(Storage.KEYS.PAYMENTS, []);
+            const pct = agreedPrice > 0 ? Math.round((amountPaid / agreedPrice) * 100) : 100;
+            const aiStatusText = isFull ? '100% Full Payment Verified' : `${pct}% Downpayment Verified`;
+            const aiNote = `AI Check: Receipt analyzed. Paid ₱${amountPaid.toLocaleString()} of ₱${agreedPrice.toLocaleString()} agreed price (${isFull ? '100% Settled' : 'Balance: ₱' + balanceDue.toLocaleString()}).`;
+
+            payments.unshift({
+                id: 'PAY-' + (1000 + payments.length + 1),
+                clientName: newComm.name,
+                service: newComm.service,
+                amount: amountPaid,
+                agreedPrice: agreedPrice,
+                balance: balanceDue,
+                mode: paymentVal,
+                paymentType: detectedOption,
+                status: 'Confirmed',
+                date: new Date().toISOString().split('T')[0],
+                receipt: tempReceiptBase64,
+                notes: 'Commission #' + newId,
+                commId: newId,
+                aiVerified: true,
+                aiStatusText: aiStatusText,
+                aiNote: aiNote
+            });
+            Storage.set(Storage.KEYS.PAYMENTS, payments);
+
+            // Hide form and show success
+            document.getElementById('commission-form-card').style.display = 'none';
+            const successBox = document.getElementById('form-success-box');
+            document.getElementById('assigned-comm-id').textContent = newId;
+            document.getElementById('track-direct-link').href = `tracker.html?id=${newId}`;
+            successBox.style.display = 'block';
+        }
+
+        function resetCommissionForm() {
+            document.getElementById('client-comm-form').reset();
+            tempReceiptBase64 = '';
+            uploadedCommissionFiles = [];
+            const wrap = document.getElementById('receipt-preview-wrap');
+            if (wrap) wrap.style.display = 'none';
+            const filesPrev = document.getElementById('commission-files-preview');
+            if (filesPrev) filesPrev.innerHTML = '';
+            document.getElementById('commission-form-card').style.display = 'block';
+            document.getElementById('form-success-box').style.display = 'none';
+        }
+
+        function toggleAdditionalPaymentForm(forcePaymentMode) {
+            const form = document.getElementById('additional-payment-form');
+            const requestForm = document.getElementById('client-comm-form');
+            const title = document.getElementById('commission-form-mode-title');
+            const toggle = document.getElementById('commission-form-mode-toggle');
+            const isPaymentMode = typeof forcePaymentMode === 'boolean'
+                ? forcePaymentMode
+                : form?.style.display !== 'block';
+            if (form) form.style.display = isPaymentMode ? 'block' : 'none';
+            if (requestForm) requestForm.style.display = isPaymentMode ? 'none' : 'block';
+            if (title) title.textContent = isPaymentMode ? 'Submit Full Payment' : 'Request a Commission';
+            if (toggle) toggle.textContent = isPaymentMode ? 'Request a Commission' : 'Submit Full Payment';
+            if (isPaymentMode) document.getElementById('additional-payment-client')?.focus();
+        }
+
+        function submitAdditionalPayment(event) {
+            event.preventDefault();
+            const file = document.getElementById('additional-payment-receipt')?.files?.[0];
+            if (!file || !file.type.startsWith('image/')) {
+                alert('Please select a payment screenshot image.');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = () => {
+                const proofs = Storage.get(Storage.KEYS.PAYMENT_PROOFS, []);
+                proofs.unshift({
+                    id: 'PROOF-' + Date.now(),
+                    clientName: document.getElementById('additional-payment-client').value.trim(),
+                    receipt: reader.result,
+                    submittedAt: new Date().toISOString()
+                });
+                Storage.set(Storage.KEYS.PAYMENT_PROOFS, proofs);
+                const form = document.getElementById('additional-payment-form');
+                form.reset();
+                const message = document.getElementById('additional-payment-message');
+                message.textContent = 'Your payment proof was submitted. The commissioner will match it to your balance.';
+                message.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    </script>
+</body>
+</html>

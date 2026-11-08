@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Commissioner Portal</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body class="admin-body">
+
+    <!-- ================= AUTHENTICATION MODAL (LOGIN / REGISTER) ================= -->
+    <div class="auth-wrapper" id="auth-wrapper">
+        <div class="auth-card">
+            <div class="auth-header">
+                <!-- Top Logo Circle with Pencil Icon for Profile Upload -->
+                <div class="auth-avatar-container" id="auth-avatar-container">
+                    <input type="file" id="reg-avatar-file" accept="image/*" style="display:none;" onchange="previewRegisterAvatar(event)">
+                    <div class="auth-avatar-circle" id="auth-header-avatar" onclick="handleAvatarCircleClick()" title="Profile Avatar">
+                        <span id="auth-header-avatar-inner">
+                            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--rose-light);">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                        </span>
+                    </div>
+                    <div class="avatar-edit-badge" id="avatar-edit-badge" onclick="handleAvatarCircleClick()" title="Click to upload profile photo">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <h2>Commissioner Portal</h2>
+            </div>
+
+            <!-- Tabs: Login vs Register -->
+            <div class="auth-tabs">
+                <button type="button" class="auth-tab-btn active" id="tab-btn-login" onclick="switchAuthTab('login')">Sign In</button>
+                <button type="button" class="auth-tab-btn" id="tab-btn-register" onclick="switchAuthTab('register')">Create Account</button>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <div class="auth-form-panel active" id="auth-login-panel">
+                <form onsubmit="handleLoginSubmit(event)">
+                    <div class="auth-field">
+                        <label for="login-username">Commissioner Account Name</label>
+                        <input type="text" id="login-username" placeholder="Enter commissioner account name" required autocomplete="username">
+                    </div>
+                    <div class="auth-field">
+                        <label for="login-password">Password</label>
+                        <div class="password-input-wrapper">
+                            <input type="password" id="login-password" placeholder="Enter your password" required autocomplete="current-password">
+                            <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('login-password', this)" title="Show password for 5 seconds">
+                                <svg class="eye-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="auth-forgot-link">
+                        <a onclick="openPasswordResetPanel()">Forgot password?</a>
+                    </div>
+                    <button type="submit" class="auth-submit-btn">Sign In</button>
+                    <div class="auth-error" id="login-error-msg"></div>
+                    <div class="auth-success" id="register-success-msg"></div>
+                    <div class="auth-switch-link">
+                        Don't have an account? <a onclick="switchAuthTab('register')">Create Account</a>
+                    </div>
+                </form>
+            </div>
+
+            <div class="auth-form-panel" id="auth-reset-panel">
+                <form id="reset-password-form" onsubmit="resetCommissionerPassword(event)">
+                    <div class="auth-field">
+                        <label for="reset-account-name">Commissioner Account Name</label>
+                        <input type="text" id="reset-account-name" placeholder="Enter your account name" required autocomplete="username">
+                    </div>
+                    <div class="auth-field">
+                        <label for="reset-new-password">New Password</label>
+                        <input type="password" id="reset-new-password" placeholder="Choose a new password" required autocomplete="new-password">
+                    </div>
+                    <div class="auth-field">
+                        <label for="reset-confirm-password">Confirm New Password</label>
+                        <input type="password" id="reset-confirm-password" placeholder="Re-enter your new password" required autocomplete="new-password">
+                    </div>
+                    <p class="auth-reset-note">This portal stores accounts in this browser and has no recovery email. Anyone who knows the account name can reset its password here.</p>
+                    <button type="submit" class="auth-submit-btn">Reset Password</button>
+                    <div class="auth-error" id="reset-error-msg"></div>
+                    <div class="auth-switch-link">
+                        <a onclick="backToSignIn()">Back to Sign In</a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- REGISTER FORM -->
+            <div class="auth-form-panel" id="auth-register-panel">
+                <form onsubmit="handleRegisterSubmit(event)">
+                    <div class="auth-field">
+                        <label for="reg-account-name">Commissioner Account Name</label>
+                        <input type="text" id="reg-account-name" placeholder="Choose commissioner account name" required autocomplete="username">
+                    </div>
+                    <div class="auth-field">
+                        <label for="reg-password">Create Password</label>
+                        <div class="password-input-wrapper">
+                            <input type="password" id="reg-password" placeholder="Choose a strong password" required autocomplete="new-password">
+                            <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('reg-password', this)" title="Show password for 5 seconds">
+                                <svg class="eye-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="auth-field">
+                        <label for="reg-confirm">Confirm Password</label>
+                        <div class="password-input-wrapper">
+                            <input type="password" id="reg-confirm" placeholder="Re-type your password" required autocomplete="new-password">
+                            <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('reg-confirm', this)" title="Show password for 5 seconds">
+                                <svg class="eye-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="submit" class="auth-submit-btn">Create Account</button>
+                    <div class="auth-error" id="register-error-msg"></div>
+                    <div class="auth-switch-link">
+                        Already registered? <a onclick="switchAuthTab('login')">Go to Sign In</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ================= MAIN ADMIN APP CONTAINER ================= -->
+    <div class="admin-container" id="admin-main-container">
+
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <div class="admin-brand">
+                <input type="file" id="sidebar-avatar-file" accept="image/*" style="display:none;" onchange="updateSidebarAvatar(event)">
+                <div class="brand-avatar-wrapper" onclick="document.getElementById('sidebar-avatar-file').click()" title="Click to upload profile photo" style="cursor: pointer; position: relative;">
+                    <div class="brand-avatar" id="sidebar-user-avatar">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--rose-light);">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
+                    <div class="brand-avatar-edit-badge" title="Edit photo">
+                        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 20h9"></path>
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div>
+                    <h2>Portal</h2>
+                    <span>Commissioner Hub</span>
+                </div>
+            </div>
+
+            <nav class="admin-nav">
+                <button class="admin-nav-item active" data-tab="submissions">
+                    <span>Commissions</span>
+                    <span class="badge" id="badge-commissions">0</span>
+                </button>
+                <button class="admin-nav-item" data-tab="payments">
+                    <span>Payment Tracker</span>
+                    <span class="badge" id="badge-payments" style="background: #2d6a4f; color:#fff;">₱</span>
+                </button>
+                <button class="admin-nav-item" data-tab="feedback">
+                    <span>Feedback Images</span>
+                    <span class="badge" id="badge-feedback">0</span>
+                </button>
+                <button class="admin-nav-item" data-tab="output">
+                    <span>Outputs &amp; Works</span>
+                    <span class="badge" id="badge-output">0</span>
+                </button>
+                <button class="admin-nav-item" data-tab="calendar">
+                    <span>Schedule &amp; Slots</span>
+                </button>
+                <button class="admin-nav-item" data-tab="services">
+                    <span>Services</span>
+                </button>
+                <button class="admin-nav-item" data-tab="about">
+                    <span>Edit About</span>
+                </button>
+                <button class="admin-nav-item" data-tab="terms">
+                    <span>Edit T &amp; C</span>
+                </button>
+                <button class="admin-nav-item" data-tab="accounts">
+                    <span>Client Accounts</span>
+                    <span class="badge" id="badge-accounts">0</span>
+                </button>
+            </nav>
+
+            <div class="admin-sidebar-footer">
+                <a href="../index.html" class="sidebar-action-btn" target="_blank">View Client Site</a>
+                <button class="sidebar-action-btn sidebar-logout-btn" onclick="handleLogout()">Log Out</button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="admin-main">
+
+            <!-- ================= SUBMISSIONS TAB ================= -->
+            <section class="tab-content active" id="tab-submissions">
+
+                <!-- Top Header with Greetings -->
+                <div class="admin-header">
+                    <div>
+                        <h1>Welcome, <span id="header-user-name" style="font-family:'Dancing Script', cursive; font-size:36px; color:var(--rose-light);">Thalie</span></h1>
+                    </div>
+                    <div>
+                        <button class="btn-action btn-primary" onclick="openAddCommissionModal()">+ New Commission</button>
+                    </div>
+                </div>
+
+                <!-- Stats (Clickable 4-part filter) -->
+                <div class="stats-grid">
+                    <div class="stat-card stat-pending" id="card-filter-accepted" onclick="filterByStatusCard('Accepted')" title="Click to filter by Accepted">
+                        <div class="stat-label">Accepted</div>
+                        <div class="stat-value" id="stat-accepted">0</div>
+                    </div>
+                    <div class="stat-card stat-progress" id="card-filter-progress" onclick="filterByStatusCard('In Progress')" title="Click to filter by In Progress">
+                        <div class="stat-label">In Progress</div>
+                        <div class="stat-value" id="stat-progress">0</div>
+                    </div>
+                    <div class="stat-card stat-done" id="card-filter-done" onclick="filterByStatusCard('Done')" title="Click to filter by Done">
+                        <div class="stat-label">Done</div>
+                        <div class="stat-value" id="stat-done">0</div>
+                    </div>
+                    <div class="stat-card stat-turned" id="card-filter-turned" onclick="filterByStatusCard('Turned Over')" title="Click to filter by Turned Over">
+                        <div class="stat-label">Turned Over</div>
+                        <div class="stat-value" id="stat-turned">0</div>
+                    </div>
+                </div>
+
+                <div class="admin-card">
+                    <div class="admin-card-header">
+                        <h2>All Submissions</h2>
+                        <div>
+                            <select id="filter-status" class="btn-status-select" onchange="handleFilterDropdownChange(this.value)">
+                                <option value="all">All Statuses</option>
+                                <option value="Accepted">Accepted</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Done">Done</option>
+                                <option value="Turned Over">Turned Over</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="overflow-x: auto;">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Client</th>
+                                    <th>Service</th>
+                                    <th>Deadline</th>
+                                    <th>Payment &amp; Type</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="submissions-tbody">
+                                <!-- Rendered via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= PAYMENT TRACKER TAB ================= -->
+            <section class="tab-content" id="tab-payments">
+                <div class="admin-header" style="margin-bottom: 20px; padding-bottom: 10px;">
+                    <div>
+                        <h2 style="font-family:'Special Elite', monospace; font-size: 22px; color: var(--paper-cream); margin: 0;">Payment Tracker &amp; Analytics</h2>
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn-action btn-secondary" onclick="exportPaymentsToCSV()">Download Sheet (.CSV)</button>
+                        <button class="btn-action btn-primary" onclick="openRecordPaymentModal()">+ Record Payment</button>
+                    </div>
+                </div>
+
+                <!-- 3 Summary Stat Cards -->
+                <div class="payment-stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+                    <div class="payment-stat-card accent-green">
+                        <div class="payment-stat-title">Total Revenue</div>
+                        <div class="payment-stat-value" id="stat-total-revenue">₱ 0.00</div>
+                        <div class="payment-stat-sub" id="stat-total-count">0 recorded payments</div>
+                    </div>
+                    <div class="payment-stat-card accent-rose">
+                        <div class="payment-stat-title">This Month</div>
+                        <div class="payment-stat-value" id="stat-month-revenue">₱ 0.00</div>
+                        <div class="payment-stat-sub" id="stat-month-label">Current Month</div>
+                    </div>
+                    <div class="payment-stat-card accent-amber">
+                        <div class="payment-stat-title">Pending Balance</div>
+                        <div class="payment-stat-value" id="stat-pending-balance">₱ 0.00</div>
+                        <div class="payment-stat-sub" id="stat-pending-count">Active downpayments</div>
+                    </div>
+                </div>
+
+                <div class="admin-card" style="margin: 20px 0;">
+                    <div class="admin-card-header"><h2>Additional Payment Proofs</h2></div>
+                    <p style="font-size:12px;color:#7a5048;margin:0 0 14px;">Review receipts submitted by clients, then record the payment amount in the tracker.</p>
+                    <div id="pending-payment-proofs"></div>
+                </div>
+
+                <!-- Charts Row: Monthly Bar Graph + Service Pie Chart -->
+                <div class="charts-grid">
+                    <!-- Monthly Bar Graph -->
+                    <div class="chart-card">
+                        <div class="chart-card-header">
+                            <div>
+                                <h3 class="chart-card-title">Monthly Revenue</h3>
+                            </div>
+                            <span class="chart-card-sub" id="bar-chart-year-label">2026 Monthly Breakdown</span>
+                        </div>
+                        <div class="chart-svg-wrap" id="monthly-bar-chart-container">
+                            <!-- Rendered via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Service Distribution Pie / Donut Chart -->
+                    <div class="chart-card">
+                        <div class="chart-card-header">
+                            <div>
+                                <h3 class="chart-card-title">Services Breakdown</h3>
+                            </div>
+                            <span class="chart-card-sub">Revenue by Type of Service</span>
+                        </div>
+                        <div id="service-pie-chart-container">
+                            <!-- Rendered via JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Sheet (Spreadsheet UI) -->
+                <div class="sheet-card">
+                    <div class="sheet-toolbar">
+                        <div class="sheet-filter-group">
+                            <span style="font-family:'Special Elite', monospace; font-size:12px; color:var(--maroon-dark); font-weight:bold; margin-right:4px;">SHEET:</span>
+                            <input type="text" id="pay-search-input" class="sheet-input" placeholder="Search client name, service..." oninput="handlePaymentFilterChange()" style="width: 220px;">
+                            <select id="pay-filter-month" class="sheet-select" onchange="handlePaymentFilterChange()">
+                                <option value="all">All Months</option>
+                            </select>
+                            <select id="pay-filter-mode" class="sheet-select" onchange="handlePaymentFilterChange()">
+                                <option value="all">All Modes</option>
+                                <option value="GCash">GCash</option>
+                                <option value="Maya">Maya</option>
+                                <option value="PayPal">PayPal</option>
+                                <option value="Maribank">Maribank</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <select id="pay-filter-type" class="sheet-select" onchange="handlePaymentFilterChange()">
+                                <option value="all">All Options</option>
+                                <option value="downpayment">50% DP</option>
+                                <option value="fully_paid">Fully Paid</option>
+                            </select>
+                        </div>
+                        <div style="font-family:'Special Elite', monospace; font-size:12px; color:#8c5b52;" id="sheet-records-counter">
+                            Showing 0 payments
+                        </div>
+                    </div>
+
+                    <div class="sheet-table-wrap">
+                        <table class="sheet-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 35px; text-align: center;">#</th>
+                                    <th>Date</th>
+                                    <th>Client Name</th>
+                                    <th>Type of Service</th>
+                                    <th style="text-align: right;">Agreed Fee</th>
+                                    <th style="text-align: right;">Amount Paid</th>
+                                    <th style="text-align: right;">Balance</th>
+                                    <th>Mode</th>
+                                    <th>Settlement</th>
+                                    <th style="text-align: center;">AI Double-Check</th>
+                                    <th style="text-align: center;">Receipt Proof</th>
+                                    <th style="text-align: center;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="payment-sheet-tbody">
+                                <!-- Rendered via JS -->
+                            </tbody>
+                            <tfoot>
+                                <tr class="sheet-total-row">
+                                    <td colspan="4" style="text-align: right; font-family:'Special Elite', monospace;">TOTAL:</td>
+                                    <td class="sheet-currency" id="sheet-filtered-total">₱ 0.00</td>
+                                    <td colspan="5"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= FEEDBACK TAB ================= -->
+            <section class="tab-content" id="tab-feedback">
+                <div class="admin-header" style="margin-bottom: 20px; padding-bottom: 10px;">
+                    <div>
+                        <h2 style="font-family:'Special Elite', monospace; font-size: 22px; color: var(--paper-cream); margin: 0;">Feedback Proof Images</h2>
+                    </div>
+                    <button class="btn-action btn-primary" onclick="openAddFeedbackModal()">+ Upload Feedback Image</button>
+                </div>
+
+                <div class="admin-card">
+                    <div class="admin-card-header">
+                        <h2>Uploaded Reviews Gallery</h2>
+                    </div>
+                    <div class="admin-cards-grid" id="feedback-grid-admin">
+                        <!-- Rendered via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= OUTPUT TAB ================= -->
+            <section class="tab-content" id="tab-output">
+                <div class="admin-header" style="margin-bottom: 20px; padding-bottom: 10px;">
+                    <div>
+                        <h2 style="font-family:'Special Elite', monospace; font-size: 22px; color: var(--paper-cream); margin: 0;">Portfolio Outputs</h2>
+                    </div>
+                    <button class="btn-action btn-primary" onclick="openAddOutputModal()">+ Add New Output</button>
+                </div>
+
+                <!-- Category Filter Pills Bar (Identical Interface to Client Side) -->
+                <div class="filter-bar" id="admin-output-filter-bar" style="margin-bottom: 22px;">
+                    <!-- Rendered via renderAdminOutputFilterBar() -->
+                </div>
+
+                <div class="admin-card">
+                    <div class="admin-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <h2 id="admin-output-section-title">All Published Works</h2>
+                        <span id="admin-output-count" style="font-size: 12px; color: #8c5b52; font-family: 'Special Elite', monospace;"></span>
+                    </div>
+                    <div class="admin-cards-grid" id="outputs-grid-admin">
+                        <!-- Rendered via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= CALENDAR TAB ================= -->
+            <section class="tab-content" id="tab-calendar">
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 16px;">
+                    <button class="btn-action btn-primary" onclick="openAddEventModal()">+ Add Event / Slot</button>
+                </div>
+
+                <div class="admin-card">
+                    <div class="admin-card-header">
+                        <div style="display: flex; gap: 15px; align-items: center;">
+                            <button class="btn-action btn-primary" onclick="changeMonth(-1)">&lt;</button>
+                            <h2 id="calendar-month-year" style="min-width: 180px; text-align: center;">November 2026</h2>
+                            <button class="btn-action btn-primary" onclick="changeMonth(1)">&gt;</button>
+                        </div>
+                        <div style="display: flex; gap: 12px; font-size: 11px;">
+                            <span style="color: #27ae60; font-weight:bold;">● Slots Available</span>
+                            <span style="color: #c0392b; font-weight:bold;">● Busy / Deadline</span>
+                            <span style="color: #2980b9; font-weight:bold;">● General Note</span>
+                        </div>
+                    </div>
+
+                    <div class="calendar-grid" id="calendar-admin-grid">
+                        <!-- Rendered via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= SERVICES TAB ================= -->
+            <section class="tab-content" id="tab-services">
+                <div style="max-width: 900px; margin: 0 auto;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <div>
+                            <h2 style="font-family:'Special Elite', monospace; font-size: 22px; color: var(--paper-cream); margin:0;">Services</h2>
+                            <p style="font-size: 13px; color: var(--rose-light); margin: 4px 0 0 0; font-style: italic;">Customize the services available in the commission form and payment dropdowns.</p>
+                        </div>
+                        <button type="button" class="btn-action btn-primary" onclick="openAddServiceModal()">+ Add New Service</button>
+                    </div>
+
+                    <div class="admin-card">
+                        <table class="admin-table services-clean-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">#</th>
+                                    <th>Service Name</th>
+                                    <th>Category Group</th>
+                                    <th style="width: 140px; text-align: center;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="services-table-body">
+                                <!-- Rendered via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= EDIT ABOUT TAB ================= -->
+            <section class="tab-content" id="tab-about">
+                <div style="max-width: 1080px; margin: 0 auto;">
+                    <!-- Site Branding & Color Theme Card -->
+                    <div class="admin-card" style="margin-bottom: 25px; width: 100%; box-sizing: border-box;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px dashed #d4c4b0; padding-bottom: 8px;">
+                            <h3 style="font-family:'Special Elite', monospace; font-size: 16px; color: var(--maroon-dark); margin: 0;">Homepage Portfolio Title</h3>
+                            <button type="button" class="btn-action btn-primary" onclick="saveSiteBrandingSettings()" style="padding: 5px 14px; font-size: 12px;">Save Title</button>
+                        </div>
+                        <p style="font-size: 12px; color: #7a5048; margin-bottom: 10px; font-style: italic;">Customize the title displayed on the homepage folder cover (use a new line or &lt;br&gt; for line break).</p>
+                        <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px;">
+                            <textarea id="site-branding-title" rows="2" style="flex: 1; padding: 10px 14px; font-family: 'Playfair Display', serif; font-size: 16px; border: 1px solid #d4c4b0; border-radius: 4px;" placeholder="e.g. YOUR NAME&#10;PORTFOLIO"></textarea>
+                        </div>
+
+                        <div style="border-top: 1px dashed #d4c4b0; padding-top: 15px;">
+                            <h4 style="font-family:'Special Elite', monospace; font-size: 14px; color: var(--maroon-dark); margin: 0 0 6px 0;">Portfolio Color Theme</h4>
+                            <p style="font-size: 12px; color: #7a5048; margin-bottom: 12px; font-style: italic;">Select a color theme for your entire website (Google-style instant color switch):</p>
+                            <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; padding: 4px 0;" id="theme-selector-pills">
+                                <button type="button" class="theme-choice-btn active" data-theme-val="red" onclick="changeSiteTheme('red')" style="background: #7a2323;" title="Crimson Red (Default)" aria-label="Crimson Red"></button>
+                                <button type="button" class="theme-choice-btn" data-theme-val="blue" onclick="changeSiteTheme('blue')" style="background: #1a4971;" title="Ocean Blue" aria-label="Ocean Blue"></button>
+                                <button type="button" class="theme-choice-btn" data-theme-val="green" onclick="changeSiteTheme('green')" style="background: #1b5e3b;" title="Forest Green" aria-label="Forest Green"></button>
+                                <button type="button" class="theme-choice-btn" data-theme-val="purple" onclick="changeSiteTheme('purple')" style="background: #552575;" title="Royal Purple" aria-label="Royal Purple"></button>
+                                <button type="button" class="theme-choice-btn" data-theme-val="slate" onclick="changeSiteTheme('slate')" style="background: #374151;" title="Slate Charcoal" aria-label="Slate Charcoal"></button>
+                                <button type="button" class="theme-choice-btn" data-theme-val="amber" onclick="changeSiteTheme('amber')" style="background: #854d0e;" title="Warm Amber" aria-label="Warm Amber"></button>
+                                <button type="button" class="theme-choice-btn" data-theme-val="rose" onclick="changeSiteTheme('rose')" style="background: #822b3f;" title="Dusty Rose" aria-label="Dusty Rose"></button>
+                                <button type="button" class="theme-choice-btn" data-theme-val="teal" onclick="changeSiteTheme('teal')" style="background: #13555d;" title="Midnight Teal" aria-label="Midnight Teal"></button>
+                                <button type="button" class="theme-choice-btn" data-theme-val="olive" onclick="changeSiteTheme('olive')" style="background: #4d5c21;" title="Vintage Olive" aria-label="Vintage Olive"></button>
+                                <button type="button" class="theme-choice-btn" data-theme-val="terracotta" onclick="changeSiteTheme('terracotta')" style="background: #85331b;" title="Terracotta Rust" aria-label="Terracotta Rust"></button>
+                                <button type="button" class="theme-choice-btn" data-theme-val="espresso" onclick="changeSiteTheme('espresso')" style="background: #4f3220;" title="Espresso Sepia" aria-label="Espresso Sepia"></button>
+                                <button type="button" class="theme-choice-btn" data-theme-val="midnight" onclick="changeSiteTheme('midnight')" style="background: #1e2863;" title="Midnight Indigo" aria-label="Midnight Indigo"></button>
+                                <button type="button" class="theme-choice-btn" data-theme-val="pink" onclick="changeSiteTheme('pink')" style="background: #7a2545;" title="Dusty Pink" aria-label="Dusty Pink"></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+                        <button type="button" class="btn-action btn-primary" onclick="saveAboutContent(true)">Save Changes</button>
+                    </div>
+
+                    <!-- 2-Column Dynamic Grid (Cards + Dotted Add Slot Guideline at the end) -->
+                    <div id="about-sections-container" class="about-cards-grid">
+                        <!-- Rendered via JS -->
+                    </div>
+
+                    <!-- Contact Channels Card (Full length matching 2 columns) -->
+                    <div class="admin-card" style="margin-top: 25px; width: 100%; box-sizing: border-box;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px dashed #d4c4b0; padding-bottom: 8px;">
+                            <h3 style="font-family:'Special Elite', monospace; font-size: 16px; color: var(--maroon-dark); margin: 0;">Contact Information</h3>
+                            <button type="button" class="btn-action btn-primary" onclick="addContactRow()" style="padding: 5px 14px; font-size: 12px;">+ Add Contact</button>
+                        </div>
+                        <div id="contact-rows-container">
+                            <!-- Rendered via JS -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= EDIT TERMS TAB ================= -->
+            <section class="tab-content" id="tab-terms">
+                <div style="max-width: 1080px; margin: 0 auto;">
+
+                    <!-- Header Settings: Title & Subtitle (Centered) -->
+                    <div class="admin-card" style="text-align: center; margin-bottom: 22px; padding: 22px 28px;">
+                        <div class="admin-form-group" style="margin-bottom: 14px;">
+                            <label style="font-family:'Special Elite', monospace; font-size: 13px; text-transform: uppercase; color: var(--maroon-dark); letter-spacing: 1.5px; text-align: center; display: block;">Page Main Title</label>
+                            <input type="text" id="terms-page-title" value="Terms &amp; Conditions" placeholder="e.g. Terms &amp; Conditions" oninput="autoSaveTerms()" style="text-align: center; font-family:'Playfair Display', serif; font-size: 26px; font-weight: 700; color: var(--maroon-dark); max-width: 520px; margin: 0 auto; display: block;">
+                        </div>
+                        <div class="admin-form-group" style="margin-bottom: 0;">
+                            <label style="font-family:'Special Elite', monospace; font-size: 12px; text-transform: uppercase; color: #7a5048; letter-spacing: 1px; text-align: center; display: block;">Page Subtitle</label>
+                            <input type="text" id="terms-page-subtitle" value="Please read carefully before requesting a commission" placeholder="e.g. Please read carefully before requesting a commission" oninput="autoSaveTerms()" style="text-align: center; font-style: italic; font-size: 14px; color: #5a2e2e; max-width: 620px; margin: 0 auto; display: block;">
+                        </div>
+                    </div>
+
+                    <!-- Top Action Button (Only Save Changes) -->
+                    <div style="display: flex; justify-content: flex-end; margin-bottom: 22px;">
+                        <button type="button" class="btn-action btn-primary" onclick="saveTermsContent(true)">Save Changes</button>
+                    </div>
+
+                    <!-- 2-Column Grid (Cards + Dotted Guideline Add Slot at the end) -->
+                    <div id="terms-sections-container" class="terms-cards-grid">
+                        <!-- Rendered via JS -->
+                    </div>
+
+                    <!-- Footnote / Agreement Disclaimer Box (Full width matching 2 columns) -->
+                    <div class="admin-card" style="margin-top: 25px; padding: 22px 28px; text-align: center; width: 100%; box-sizing: border-box;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px dashed #d4c4b0; padding-bottom: 8px;">
+                            <h3 style="font-family:'Special Elite', monospace; font-size: 15px; color: var(--maroon-dark); margin: 0; text-transform: uppercase; letter-spacing: 1px;">Agreement Footnote / Disclaimer</h3>
+                            <div style="display: flex; gap: 8px;">
+                                <button type="button" class="btn-action btn-secondary" onclick="insertDefaultTermsFootnote()" style="padding: 5px 12px; font-size: 11px;">Insert Sample Text</button>
+                                <button type="button" class="btn-action btn-danger" onclick="clearTermsFootnote()" style="padding: 5px 12px; font-size: 11px;">Clear</button>
+                            </div>
+                        </div>
+                        <p style="font-size: 12px; color: #7a5048; margin-bottom: 12px; font-style: italic;">Optional: Shown at the bottom of the public Terms &amp; Conditions page. Leave blank if none.</p>
+                        <div class="admin-form-group" style="margin-bottom: 12px; text-align: left; max-width: 580px; margin-left: auto; margin-right: auto;">
+                            <label style="font-family:'Special Elite', monospace; font-size: 11px; text-transform: uppercase; color: #7a5048; letter-spacing: 1px; display: block; margin-bottom: 5px;">Footnote Title (Optional)</label>
+                            <input type="text" id="terms-footnote-title" oninput="autoSaveTerms()" placeholder="e.g. Agreement, Important Notice (leave blank to hide)" style="text-align: center; font-family:'Special Elite', monospace; font-size: 13px; text-transform: uppercase; color: var(--maroon-dark); width: 100%; box-sizing: border-box; letter-spacing: 1px;">
+                        </div>
+                        <textarea id="terms-page-footnote" rows="3" oninput="autoSaveTerms()" placeholder="Leave blank if none, or enter custom agreement disclaimer / click 'Insert Sample Text'..." style="text-align: center; font-family:'Special Elite', monospace; font-size: 13.5px; line-height: 1.6; text-transform: uppercase; color: var(--maroon-dark); width: 100%; box-sizing: border-box;"></textarea>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- Main Admin Account Approvals -->
+            <section class="tab-content" id="tab-accounts">
+                <div class="admin-card" style="max-width:1100px;margin:0 auto;padding:24px 28px;">
+                    <div style="border-bottom:2px dotted var(--rose);padding-bottom:14px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;gap:12px;">
+                        <div>
+                            <h2 style="font-family:'Playfair Display',serif;font-size:22px;color:var(--maroon-dark);margin:0 0 4px;">Client Accounts &amp; Registration Approvals</h2>
+                            <p style="font-family:'Special Elite',monospace;font-size:12px;color:#7a5048;margin:0;">Review registrations, mark payment status, and approve or decline account access.</p>
+                        </div>
+                        <span class="badge" id="badge-pending-accounts" style="font-size:13px;padding:4px 12px;">0</span>
+                    </div>
+                    <div id="account-approval-list"></div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- ================= MODALS ================= -->
+
+    <!-- View Submission Detail Modal -->
+    <div class="modal-overlay" id="modal-view-submission">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 id="modal-sub-id">Commission Details</h3>
+                <button class="modal-close" onclick="closeModal('modal-view-submission')">&times;</button>
+            </div>
+            <div id="modal-sub-content"></div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Commission Modal -->
+    <div class="modal-overlay" id="modal-edit-commission">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Add New Commission</h3>
+                <button class="modal-close" onclick="closeModal('modal-edit-commission')">&times;</button>
+            </div>
+            <form onsubmit="handleSaveCommission(event)">
+                <div class="admin-form-group">
+                    <label>Client Name</label>
+                    <input type="text" id="comm-client" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="admin-form-group">
+                        <label>Contact Channel</label>
+                        <select id="comm-contact-channel">
+                            <option value="Facebook">Facebook</option>
+                            <option value="Telegram">Telegram</option>
+                            <option value="Email">Email</option>
+                            <option value="Instagram">Instagram</option>
+                            <option value="Discord">Discord</option>
+                            <option value="Twitter/X">Twitter / X</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="admin-form-group">
+                        <label>Account Handle / Name</label>
+                        <input type="text" id="comm-contact-account" placeholder="e.g. maria_santos" required>
+                    </div>
+                </div>
+                <div class="admin-form-group">
+                    <label>Service Type</label>
+                    <input type="text" id="comm-service" required placeholder="e.g. Infographics, Website, Reviewer">
+                </div>
+                <div class="admin-form-group">
+                    <label>Description</label>
+                    <textarea id="comm-desc" rows="3" required></textarea>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                    <div class="admin-form-group">
+                        <label>Deadline</label>
+                        <input type="date" id="comm-deadline">
+                    </div>
+                    <div class="admin-form-group">
+                        <label>Payment Method</label>
+                        <select id="comm-payment" onchange="toggleAdminPaymentOther(this.value)">
+                            <option value="gcash">GCash</option>
+                            <option value="maya">Maya</option>
+                            <option value="paypal">PayPal</option>
+                            <option value="maribank">Maribank</option>
+                            <option value="other">Other (specify)</option>
+                        </select>
+                        <input type="text" id="comm-payment-other" placeholder="Type payment method" style="display:none; margin-top:6px; font-size:12px; padding:6px 10px;">
+                    </div>
+                    <div class="admin-form-group">
+                        <label>Payment Type</label>
+                        <select id="comm-payment-type">
+                            <option value="downpayment">50% DP</option>
+                            <option value="fully_paid">Fully Paid</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="admin-form-group">
+                    <label>Upload Proof of Payment Screenshot (50% or Fully Paid)</label>
+                    <input type="file" id="comm-receipt-file" accept="image/*" onchange="previewCommissionReceipt(event)">
+                    <div class="image-upload-preview" id="comm-receipt-preview-box" onclick="document.getElementById('comm-receipt-file').click()" style="height: 120px;">
+                        <span class="upload-text">Click to attach payment proof receipt / screenshot</span>
+                    </div>
+                </div>
+                <div class="admin-form-group">
+                    <label>Status</label>
+                    <select id="comm-status">
+                        <option value="Accepted">Accepted</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Done">Done</option>
+                        <option value="Turned Over">Turned Over</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-action btn-primary" style="width: 100%; padding: 12px; font-size: 14px;">Save Commission</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Upload Feedback Modal -->
+    <div class="modal-overlay" id="modal-add-feedback">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Upload Feedback Image</h3>
+                <button class="modal-close" onclick="closeModal('modal-add-feedback')">&times;</button>
+            </div>
+            <form onsubmit="handleSaveFeedback(event)">
+                <div class="admin-form-group">
+                    <label>Client Full Name</label>
+                    <input type="text" id="fb-client" required placeholder="e.g. Maria Santos (will display as M•••• S.)">
+                </div>
+                <div class="admin-form-group">
+                    <label>Project Commissioned</label>
+                    <input type="text" id="fb-project" required placeholder="e.g. Infographics, Website, Reviewer">
+                </div>
+                <div class="admin-form-group">
+                    <label>Feedback Screenshot / Image (Optional)</label>
+                    <input type="file" id="fb-image-file" accept="image/*" onchange="previewImageFile(event, 'fb-preview-box')">
+                    <div class="image-upload-preview" id="fb-preview-box" onclick="document.getElementById('fb-image-file').click()">
+                        <span class="upload-text">Click to choose screenshot or leave empty for default proof</span>
+                    </div>
+                </div>
+                <div class="admin-form-group">
+                    <label>Client Feedback</label>
+                    <textarea id="fb-notes" rows="3" placeholder="Enter the client's feedback message here..."></textarea>
+                </div>
+                <button type="submit" class="btn-action btn-primary" style="width: 100%; padding: 12px; font-size: 14px;">Upload Feedback</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Set Default Feedback Proof Image Modal -->
+    <div class="modal-overlay" id="modal-default-proof">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Default Feedback Proof Image</h3>
+                <button class="modal-close" onclick="closeModal('modal-default-proof')">&times;</button>
+            </div>
+            <p style="font-size: 13px; color: #5a2e2e; line-height: 1.5; margin-bottom: 15px;">
+                This default image will be displayed on feedback cards whenever a client leaves a review without attaching a screenshot proof.
+            </p>
+            <div class="admin-form-group">
+                <label>Default Proof Preview</label>
+                <div class="image-upload-preview" id="default-proof-preview-box" onclick="document.getElementById('default-proof-file').click()" style="height: 180px;">
+                    <span class="upload-text">Click to upload new default proof image</span>
+                </div>
+                <input type="file" id="default-proof-file" accept="image/*" style="display:none;" onchange="previewDefaultProofImage(event)">
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 18px;">
+                <button type="button" class="btn-action btn-primary" style="flex: 1; padding: 12px;" onclick="saveDefaultProofImage()">Save Default Image</button>
+                <button type="button" class="btn-action btn-danger" style="padding: 12px 16px;" onclick="resetDefaultProofImage()">Reset to Default</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manage Categories Modal -->
+    <div class="modal-overlay" id="modal-manage-categories">
+        <div class="modal-box" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>Manage Output Categories</h3>
+                <button class="modal-close" onclick="closeModal('modal-manage-categories')">&times;</button>
+            </div>
+            <div style="margin-bottom: 18px;">
+                <label style="font-family:'Special Elite', monospace; font-size:12px; color:var(--maroon-dark); text-transform:uppercase; font-weight:bold;">Add New Category</label>
+                <div style="display: flex; gap: 8px; margin-top: 6px;">
+                    <input type="text" id="new-category-input" placeholder="e.g. Photography, 3D Art..." style="flex:1; padding: 9px 12px; border: 1px solid #cbb8a8; border-radius: 4px; font-size: 13px;">
+                    <button type="button" class="btn-action btn-primary" onclick="addNewCategoryFromModal()">+ Add</button>
+                </div>
+            </div>
+            <div style="border-top: 1px dashed #dcd0c2; padding-top: 15px;">
+                <label style="font-family:'Special Elite', monospace; font-size:12px; color:var(--maroon-dark); text-transform:uppercase; font-weight:bold; display:block; margin-bottom: 10px;">Existing Categories</label>
+                <div id="manage-categories-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto;">
+                    <!-- Rendered via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Output Modal -->
+    <div class="modal-overlay" id="modal-add-output">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Add New Portfolio Output</h3>
+                <button class="modal-close" onclick="closeModal('modal-add-output')">&times;</button>
+            </div>
+            <form onsubmit="handleSaveOutput(event)">
+                <div class="admin-form-group">
+                    <label>Project Title</label>
+                    <input type="text" id="out-title" placeholder="e.g. Chemistry Reviewer, Event Poster" required>
+                </div>
+                <div class="admin-form-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <label style="margin-bottom: 0;">Category</label>
+                        <button type="button" class="btn-action btn-secondary" onclick="promptAddNewCategory()" style="padding: 2px 10px; font-size: 11px;">+ New Category</button>
+                    </div>
+                    <select id="out-category" required style="width: 100%;">
+                        <!-- Populated dynamically via JS -->
+                    </select>
+                </div>
+                <div class="admin-form-group">
+                    <label>Upload Sample Image(s)</label>
+                    <input type="file" id="out-samples-file" accept="image/*" multiple onchange="previewOutputSamples(event)" style="font-size: 12px; margin-bottom: 8px;">
+                    <div id="out-samples-preview-grid" style="display: flex; flex-wrap: wrap; gap: 8px; min-height: 80px; background: #faf4ee; border: 1px dashed #dcd0c2; border-radius: 4px; padding: 10px; align-items: center; justify-content: center;">
+                        <span id="out-samples-empty-hint" style="font-size: 11.5px; color: #886560; font-style: italic;">No samples chosen. First image will be the cover.</span>
+                    </div>
+                </div>
+                <button type="submit" class="btn-action btn-primary" style="width: 100%; padding: 12px; font-size: 14px;">Publish Output</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Event Modal -->
+    <div class="modal-overlay" id="modal-add-event">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Add Calendar Slot / Event</h3>
+                <button class="modal-close" onclick="closeModal('modal-add-event')">&times;</button>
+            </div>
+            <form onsubmit="handleSaveEvent(event)">
+                <div class="admin-form-group">
+                    <label>Date</label>
+                    <input type="date" id="event-date" required>
+                </div>
+                <div class="admin-form-group">
+                    <label>Title / Note</label>
+                    <input type="text" id="event-title" required placeholder="e.g. Slots OPEN (3 slots), COM-1002 Deadline">
+                </div>
+                <div class="admin-form-group">
+                    <label>Type</label>
+                    <select id="event-type">
+                        <option value="open">Slots Available (Green)</option>
+                        <option value="deadline">Deadline / Busy (Red)</option>
+                        <option value="general">General Note (Blue)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-action btn-primary" style="width: 100%; padding: 12px; font-size: 14px;">Save Slot</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Record / Edit Payment Modal -->
+    <div class="modal-overlay" id="modal-record-payment">
+        <div class="modal-box" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3 id="record-payment-modal-title">Record Payment Entry</h3>
+                <button class="modal-close" onclick="closeModal('modal-record-payment')">&times;</button>
+            </div>
+            <form onsubmit="handleSavePayment(event)">
+                <input type="hidden" id="pay-edit-id" value="">
+                <input type="hidden" id="pay-proof-submission-id" value="">
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="admin-form-group">
+                        <label>Client Name</label>
+                        <input type="text" id="pay-client-name" placeholder="e.g. Maria Santos" required>
+                    </div>
+                    <div class="admin-form-group">
+                        <label>Date</label>
+                        <input type="date" id="pay-date" required>
+                    </div>
+                </div>
+
+                <div class="admin-form-group">
+                    <label>Type of Service</label>
+                    <select id="pay-service" required>
+                        <option value="" disabled selected>Select a service</option>
+                        <option value="Other">Other Services</option>
+                    </select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="admin-form-group">
+                        <label>Agreed Project Fee (PHP)</label>
+                        <input type="number" id="pay-agreed-price" placeholder="e.g. 2000" min="0" step="any" oninput="handleAdminPayPriceDetect()">
+                    </div>
+                    <div class="admin-form-group">
+                        <label>Amount Paid (PHP)</label>
+                        <input type="number" id="pay-amount" placeholder="e.g. 1000" min="0" step="any" oninput="handleAdminPayPriceDetect()" required>
+                    </div>
+                </div>
+
+                <div id="pay-admin-detect-pill" style="display:none; font-family:'Special Elite', monospace; font-size:11.5px; padding: 6px 10px; border-radius: 4px; margin-bottom: 12px; background: #eafaf1; color: #1e8449; border: 1px solid #a9dfbf;"></div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="admin-form-group">
+                        <label>Mode of Payment</label>
+                        <select id="pay-mode">
+                            <option value="GCash">GCash</option>
+                            <option value="Maya">Maya</option>
+                            <option value="PayPal">PayPal</option>
+                            <option value="Maribank">Maribank</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="admin-form-group">
+                        <label>Payment Settlement</label>
+                        <select id="pay-option">
+                            <option value="downpayment">50% DP</option>
+                            <option value="fully_paid" selected>Fully Paid</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="admin-form-group">
+                    <label>Status</label>
+                    <select id="pay-status">
+                        <option value="Confirmed" selected>Confirmed</option>
+                        <option value="Pending">Pending</option>
+                    </select>
+                </div>
+
+                <div class="admin-form-group">
+                    <label>Reference # / Notes (Optional)</label>
+                    <input type="text" id="pay-notes" placeholder="e.g. GCash Ref # 10029381928, Downpayment for batch 1">
+                </div>
+
+                <div class="admin-form-group">
+                    <label>Proof Receipt (Screenshot / Photo)</label>
+                    <input type="file" id="pay-receipt-file" accept="image/*" onchange="previewPaymentReceipt(event)" style="font-size: 12px;">
+                    <div id="pay-receipt-preview-wrap" style="display:none; margin-top: 8px; text-align: center; background: #faf4ee; padding: 8px; border-radius: 4px; border: 1px dashed #dcd0c2;">
+                        <img id="pay-receipt-preview-img" src="" alt="Receipt Preview" style="max-height: 120px; max-width: 100%; border-radius: 4px;">
+                        <button type="button" onclick="removePaymentReceipt()" style="display: block; margin: 4px auto 0; font-size: 11px; background: none; border: none; color: #b02a37; cursor: pointer; text-decoration: underline;">Remove Image</button>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-action btn-primary" style="width: 100%; padding: 12px; font-size: 14px;">Save Payment Entry</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Payment Receipt Modal -->
+    <div class="modal-overlay" id="modal-view-receipt">
+        <div class="modal-box" style="max-width: 480px; text-align: center;">
+            <div class="modal-header">
+                <h3>Proof of Payment</h3>
+                <button class="modal-close" onclick="closeModal('modal-view-receipt')">&times;</button>
+            </div>
+            <div style="padding: 10px 0;">
+                <div id="view-receipt-details" style="font-family:'Special Elite', monospace; font-size:13px; color:var(--maroon-dark); margin-bottom: 12px;"></div>
+                <div style="background: #180808; border-radius: 6px; padding: 8px; max-height: 440px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                    <img id="view-receipt-img" src="" alt="Proof Screenshot" style="max-height: 420px; max-width: 100%; object-fit: contain; border-radius: 4px;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Payment Double-Check Modal -->
+    <div class="modal-overlay" id="modal-ai-check">
+        <div class="modal-box" style="max-width: 600px;">
+            <div class="modal-header" style="border-bottom: 1px dashed #dcd0c2; padding-bottom: 10px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--maroon)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <h3 style="font-family:'Special Elite', monospace; color: var(--maroon-dark); margin:0;">AI Payment Double-Check Analysis</h3>
+                </div>
+                <button class="modal-close" onclick="closeModal('modal-ai-check')">&times;</button>
+            </div>
+            <div id="ai-check-modal-body" style="padding: 14px 0;">
+                <!-- Populated via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="admin-toast" id="admin-toast">Action completed!</div>
+
+    <script src="../js/storage.js"></script>
+    <script src="../js/admin.js"></script>
+    <!-- Add / Edit Service Modal -->
+    <div class="modal-overlay" id="modal-service">
+        <div class="modal-box" style="max-width: 440px;">
+            <div class="modal-header">
+                <h3 id="modal-service-title">Add Service</h3>
+                <button class="modal-close" onclick="closeModal('modal-service')">&times;</button>
+            </div>
+            <form onsubmit="handleSaveService(event)">
+                <input type="hidden" id="service-edit-index" value="-1">
+                <div class="admin-form-group">
+                    <label>Service Name</label>
+                    <input type="text" id="service-name-input" required placeholder="e.g. Infographics, Logo Design, Website">
+                </div>
+                <div class="admin-form-group">
+                    <label>Category Group</label>
+                    <input type="text" id="service-category-input" required placeholder="e.g. Graphic Design, Academic and Document, Web / App">
+                </div>
+                <button type="submit" class="btn-action btn-primary" style="width: 100%; padding: 10px;">Save Service</button>
+            </form>
+        </div>
+    </div>
+
+</body>
+</html>

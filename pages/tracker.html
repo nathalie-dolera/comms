@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Commission Tracker &amp; Schedule - Thalie's Portfolio</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        .tracker-container {
+            max-width: 1050px;
+            margin: 0 auto;
+            padding: 85px 20px 40px;
+        }
+
+        .tracker-header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .tracker-header h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 42px;
+            color: var(--paper-cream);
+        }
+
+        .tracker-header p {
+            font-family: 'Special Elite', monospace;
+            color: var(--rose-light);
+            font-size: 15px;
+            letter-spacing: 1px;
+            margin-top: 6px;
+        }
+
+        /* Search Box */
+        .search-card {
+            background: var(--paper-cream);
+            padding: 25px 30px;
+            border-radius: 6px;
+            box-shadow: 4px 4px 20px var(--shadow-dark);
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .search-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--maroon);
+        }
+
+        .search-form {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 12px 16px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 14px;
+            border: 1px solid #cbb8a8;
+            border-radius: 4px;
+            background: white;
+            color: var(--text-body);
+        }
+
+        .search-btn {
+            padding: 12px 24px;
+            background: var(--maroon);
+            color: white;
+            font-family: 'Special Elite', monospace;
+            font-size: 14px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .search-btn:hover {
+            background: var(--maroon-dark);
+        }
+
+        /* Tracker Result Box */
+        .result-box {
+            display: none;
+            background: #fff;
+            padding: 25px 30px;
+            border-radius: 6px;
+            margin-top: 20px;
+            border: 1px solid #e0d0c0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        /* Step Progress Bar */
+        .progress-stepper {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+            margin: 35px 15px 25px;
+        }
+
+        .progress-stepper::before {
+            content: '';
+            position: absolute;
+            top: 18px;
+            left: 30px;
+            right: 30px;
+            height: 4px;
+            background: #e0d0c0;
+            z-index: 1;
+        }
+
+        .progress-bar-fill {
+            position: absolute;
+            top: 18px;
+            left: 30px;
+            height: 4px;
+            background: #2ecc71;
+            z-index: 2;
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+
+        .step-item {
+            position: relative;
+            z-index: 3;
+            text-align: center;
+            width: 90px;
+        }
+
+        .step-bubble {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 8px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #888;
+            transition: all 0.3s;
+        }
+
+        .step-item.active .step-bubble {
+            border-color: #3498db;
+            background: #3498db;
+            color: white;
+            box-shadow: 0 0 10px rgba(52, 152, 219, 0.4);
+        }
+
+        .step-item.completed .step-bubble {
+            border-color: #2ecc71;
+            background: #2ecc71;
+            color: white;
+        }
+
+        .step-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #555;
+            text-transform: uppercase;
+            font-family: 'Special Elite', monospace;
+        }
+
+        .step-item.active .step-label {
+            color: #2a1010;
+        }
+
+        /* Full-Width Calendar Section */
+        .calendar-section {
+            margin-top: 35px;
+            width: 100%;
+        }
+
+        /* Client Calendar Card */
+        .calendar-card {
+            background: var(--paper-cream);
+            padding: 30px;
+            border-radius: 6px;
+            box-shadow: 4px 4px 20px var(--shadow-dark);
+            width: 100%;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        .calendar-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--maroon);
+        }
+
+        .calendar-card h2 {
+            font-family: 'Special Elite', monospace;
+            font-size: 20px;
+            color: var(--maroon-dark);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin: 0;
+        }
+
+        .client-calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin-top: 14px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .client-cal-day-header {
+            text-align: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--maroon);
+            text-transform: uppercase;
+            padding: 8px 4px;
+            font-family: 'Special Elite', monospace;
+            letter-spacing: 1px;
+            background: rgba(107, 24, 20, 0.06);
+            border-radius: 4px;
+        }
+
+        .client-cal-cell {
+            background: white;
+            min-height: 85px;
+            border-radius: 6px;
+            padding: 8px;
+            font-size: 13px;
+            position: relative;
+            border: 1px solid #e2d2c2;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+        }
+
+        .client-cal-cell:hover {
+            border-color: var(--maroon);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        }
+
+        .client-cal-cell.today {
+            border: 2px solid var(--maroon);
+            background: #fff8f5;
+        }
+
+        .client-cal-cell.other-month {
+            opacity: 0.35;
+            background: #f9f6f2;
+        }
+
+        .client-cal-number {
+            font-weight: 700;
+            font-family: 'Special Elite', monospace;
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 6px;
+        }
+
+        .client-event-pill {
+            font-size: 11px;
+            padding: 4px 6px;
+            border-radius: 4px;
+            margin-top: 4px;
+            white-space: normal;
+            line-height: 1.3;
+            word-break: break-word;
+            display: block;
+            font-family: 'Poppins', sans-serif;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+
+        .pill-open {
+            background: #d4edda;
+            color: #155724;
+            font-weight: bold;
+        }
+
+        .pill-busy {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .pill-general {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        /* Status Pills */
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-accepted { background: #fef3d6; color: #b7791f; border: 1px solid #f6e05e; }
+        .badge-progress { background: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; }
+        .badge-done { background: #f0fff4; color: #276749; border: 1px solid #c6f6d5; }
+        .badge-turned { background: #faf5ff; color: #6b46c1; border: 1px solid #e9d8fd; }
+
+        @media (max-width: 850px) {
+            .tracker-grid {
+                grid-template-columns: 1fr;
+            }
+            .progress-stepper {
+                flex-wrap: wrap;
+                gap: 15px;
+            }
+            .progress-stepper::before, .progress-bar-fill {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-background"></div>
+
+    <!-- Navigation -->
+    <nav class="top-nav">
+        <a href="../index.html">Home</a>
+        <a href="about.html">About</a>
+        <a href="output.html">Output</a>
+        <a href="feedback.html">Feedback</a>
+        <a href="terms.html">T &amp; C</a>
+        <a href="form.html">Form</a>
+        <a href="tracker.html" class="active">Tracker &amp; Slots</a>
+    </nav>
+
+    <div class="tracker-container">
+        <div class="tracker-header">
+            <h1>Commission Tracker</h1>
+            <p>Track your commission status live &amp; view open schedule slots</p>
+        </div>
+
+        <!-- SEARCH FORM -->
+        <div class="search-card">
+            <h2 style="font-family: 'Special Elite', monospace; font-size: 18px; color: var(--maroon-dark); text-transform: uppercase; margin-bottom: 12px;">Track Your Commission</h2>
+            <div class="search-form">
+                <input type="text" id="tracker-search-input" class="search-input" placeholder="Enter your name to see your status...">
+                <button class="search-btn" onclick="searchCommission()">Search Status</button>
+            </div>
+
+            <!-- RESULT DISPLAY -->
+            <div id="tracker-result" class="result-box">
+                <!-- Injected via JavaScript -->
+            </div>
+        </div>
+
+        <!-- FULL-WIDTH AVAILABILITY CALENDAR -->
+        <div class="calendar-section">
+            <div class="calendar-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px dotted var(--rose); padding-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <h2>Availability Calendar</h2>
+                        <p style="font-size: 13px; color: #666; margin: 4px 0 0 0; font-family: 'Poppins', sans-serif;">Check open commission slots and upcoming booking deadlines</p>
+                    </div>
+                    <div style="display:flex; align-items: center; gap: 10px;">
+                        <button onclick="clientChangeMonth(-1)" style="padding: 6px 12px; cursor: pointer; background: var(--maroon); color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 14px;">&lt;</button>
+                        <span id="client-cal-month-year" style="font-size: 16px; font-weight: bold; color: var(--maroon); min-width: 150px; text-align: center; font-family: 'Playfair Display', serif;">November 2026</span>
+                        <button onclick="clientChangeMonth(1)" style="padding: 6px 12px; cursor: pointer; background: var(--maroon); color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 14px;">&gt;</button>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 18px; margin-bottom: 14px; font-size: 12px; font-family: 'Poppins', sans-serif;">
+                    <span style="color: #721c24; font-weight: 600;">● Booked Schedule / Busy</span>
+                    <span style="color: #666; font-style: italic;">All blank dates are open for new commission bookings</span>
+                </div>
+                <div class="client-calendar-grid" id="client-calendar-grid">
+                    <!-- Injected via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/storage.js"></script>
+    <script>
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        let clientMonth = new Date().getMonth();
+        let clientYear = new Date().getFullYear();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderClientCalendar();
+
+            // Auto check if URL has ?id=COM-XXXX
+            const urlParams = new URLSearchParams(window.location.search);
+            const queryId = urlParams.get('id');
+            if (queryId) {
+                document.getElementById('tracker-search-input').value = queryId;
+                searchCommission();
+            }
+        });
+
+        function getStatusBadge(status) {
+            switch(status) {
+                case 'Accepted': return '<span class="status-badge badge-accepted">Accepted</span>';
+                case 'In Progress': return '<span class="status-badge badge-progress">In Progress</span>';
+                case 'Done': return '<span class="status-badge badge-done">Done</span>';
+                case 'Turned Over': return '<span class="status-badge badge-turned">Turned Over</span>';
+                default: return `<span class="status-badge badge-accepted">${status}</span>`;
+            }
+        }
+
+        function renderQueue() {
+            const list = Storage.get(Storage.KEYS.SUBMISSIONS, []);
+            const container = document.getElementById('client-queue-list');
+            if (!container) return;
+
+            if (list.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:#888; padding: 20px;">No commissions queued.</div>';
+                return;
+            }
+
+            container.innerHTML = list.map(sub => `
+                <div class="queue-item" onclick="selectQueueItem('${escapeHtml(sub.name)}')" style="cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" title="Click to track status">
+                    <div class="queue-item-info">
+                        <strong>${escapeHtml(sub.service)}</strong>
+                        <small>Client: ${censorName(sub.name)} • Target: ${sub.deadline || 'Flexible'}</small>
+                    </div>
+                    <div>
+                        ${getStatusBadge(sub.status)}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function selectQueueItem(clientName) {
+            document.getElementById('tracker-search-input').value = clientName;
+            searchCommission();
+            window.scrollTo({ top: 120, behavior: 'smooth' });
+        }
+
+        function censorName(name) {
+            if (!name) return 'Anonymous';
+            const parts = name.trim().split(/\s+/);
+            return parts.map(p => p[0].toUpperCase() + '.').join(' ');
+        }
+
+        function searchCommission() {
+            const query = document.getElementById('tracker-search-input').value.trim().toLowerCase();
+            const resultBox = document.getElementById('tracker-result');
+            if (!query) {
+                resultBox.style.display = 'none';
+                return;
+            }
+
+            const list = Storage.get(Storage.KEYS.SUBMISSIONS, []);
+            const match = list.find(s => 
+                (s.name && s.name.toLowerCase().includes(query)) ||
+                (s.service && s.service.toLowerCase().includes(query)) ||
+                (s.id && s.id.toLowerCase() === query)
+            );
+
+            resultBox.style.display = 'block';
+
+            if (!match) {
+                resultBox.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #a94442;">
+                        <p style="font-weight: bold; font-size: 16px;">Commission not found.</p>
+                        <p style="font-size: 13px; color: #777;">Please double check your Client Name or Service Type.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Calculate progress steps
+            const statuses = ['Accepted', 'In Progress', 'Done', 'Turned Over'];
+            const currentIndex = statuses.indexOf(match.status);
+            const fillPercent = currentIndex >= 0 ? (currentIndex / 3) * 100 : 0;
+
+            // Lookup payment info from match or cross-reference Payments sheet
+            let paidAmount = parseFloat(match.amountPaid);
+            let agreedAmount = parseFloat(match.agreedPrice);
+            let balanceAmount = parseFloat(match.balance);
+
+            // Cross-reference Payments sheet for full payment details
+            const payments = Storage.get(Storage.KEYS.PAYMENTS, []);
+            const relatedPayments = payments.filter(p =>
+                (match.id && p.commId === match.id) ||
+                (p.clientName && match.name && p.clientName.toLowerCase() === match.name.toLowerCase())
+            );
+
+            if (relatedPayments.length > 0) {
+                // Sum all related payments
+                const totalPaid = relatedPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+                const latestPayment = relatedPayments[0];
+                const latestAgreed = parseFloat(latestPayment.agreedPrice) || 0;
+
+                if (isNaN(paidAmount) || paidAmount <= 0) {
+                    paidAmount = totalPaid;
+                }
+                if (isNaN(agreedAmount) || agreedAmount <= 0) {
+                    agreedAmount = latestAgreed || (latestPayment.paymentType === 'fully_paid' ? totalPaid : totalPaid * 2);
+                }
+                balanceAmount = Math.max(0, agreedAmount - paidAmount);
+            }
+
+            // If paymentType is fully_paid and we still have no paidAmount but have agreedPrice, treat paid = agreed
+            const isFullyPaid = (match.paymentType === 'fully_paid') || (balanceAmount === 0 && paidAmount > 0);
+            if (isFullyPaid && (isNaN(paidAmount) || paidAmount <= 0) && !isNaN(agreedAmount) && agreedAmount > 0) {
+                paidAmount = agreedAmount;
+                balanceAmount = 0;
+            }
+
+            const statusLabel = isFullyPaid ? 'Fully Paid' : '50% DP';
+
+            resultBox.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 12px; margin-bottom: 15px;">
+                    <div>
+                        <span style="font-size: 20px; font-weight: bold; color: var(--maroon);">${match.service}</span>
+                        <span style="margin-left: 10px; font-size: 14px; color: #666;">Client: ${match.name}</span>
+                    </div>
+                    <div>${getStatusBadge(match.status)}</div>
+                </div>
+
+                <!-- PROGRESS STEPPER -->
+                <div class="progress-stepper">
+                    <div class="progress-bar-fill" style="width: ${fillPercent}%;"></div>
+                    ${statuses.map((step, idx) => {
+                        let cls = '';
+                        let icon = idx + 1;
+                        if (idx < currentIndex) {
+                            cls = 'completed';
+                            icon = 'OK';
+                        } else if (idx === currentIndex) {
+                            cls = 'active';
+                            icon = '●';
+                        }
+                        return `
+                            <div class="step-item ${cls}">
+                                <div class="step-bubble">${icon}</div>
+                                <div class="step-label">${step}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; background: #faf8f5; padding: 15px; border-radius: 4px; font-size: 13px;">
+                    <div><strong>Client:</strong> ${escapeHtml(match.name)}</div>
+                    <div><strong>Target Deadline:</strong> ${escapeHtml(match.deadline || 'Flexible')}</div>
+                    <div><strong>Submitted Date:</strong> ${escapeHtml(match.submittedAt || 'Recent')}</div>
+                    <div><strong>Payment Method:</strong> <span style="text-transform: uppercase;">${escapeHtml(match.payment || 'N/A')}</span></div>
+                    <div>
+                        <strong>Amount Paid:</strong>
+                        <span style="color: #276749; font-weight: 700;">
+                            ${(paidAmount > 0) ? '&#8369;' + paidAmount.toLocaleString() : (isFullyPaid ? 'Fully Settled' : '&#8369;0')}
+                        </span>
+                        ${(!isNaN(agreedAmount) && agreedAmount > 0 && agreedAmount > paidAmount && !isFullyPaid) ? `
+                            <span style="font-size: 11.5px; color: #666;">(Agreed Fee: &#8369;${agreedAmount.toLocaleString()})</span>
+                        ` : (agreedAmount > 0 && isFullyPaid && paidAmount > 0) ? `
+                            <span style="font-size: 11.5px; color: #666;">(Total: &#8369;${agreedAmount.toLocaleString()})</span>
+                        ` : ''}
+                    </div>
+                    <div>
+                        <strong>Payment Status:</strong>
+                        <span style="font-weight: 600; color: ${isFullyPaid ? '#276749' : '#b45309'};">
+                            ${statusLabel}${(!isFullyPaid && !isNaN(balanceAmount) && balanceAmount > 0) ? ` (Balance: &#8369;${balanceAmount.toLocaleString()})` : ''}
+                        </span>
+                    </div>
+                </div>
+
+                <div style="margin-top: 15px; font-size: 13px; color: #444;">
+                    <strong>Commission Scope:</strong>
+                    <p style="margin-top: 4px; color: #666;">${match.description || 'Custom Commission'}</p>
+                </div>
+            `;
+        }
+
+        // Calendar Rendering
+        function clientChangeMonth(dir) {
+            clientMonth += dir;
+            if (clientMonth < 0) {
+                clientMonth = 11;
+                clientYear--;
+            } else if (clientMonth > 11) {
+                clientMonth = 0;
+                clientYear++;
+            }
+            renderClientCalendar();
+        }
+
+        function renderClientCalendar() {
+            const monthNames = [
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+            ];
+
+            const label = document.getElementById('client-cal-month-year');
+            if (label) label.textContent = `${monthNames[clientMonth]} ${clientYear}`;
+
+            const container = document.getElementById('client-calendar-grid');
+            if (!container) return;
+
+            const events = Storage.get(Storage.KEYS.CALENDAR, []);
+
+            const firstDayIndex = new Date(clientYear, clientMonth, 1).getDay();
+            const totalDays = new Date(clientYear, clientMonth + 1, 0).getDate();
+            const prevMonthDays = new Date(clientYear, clientMonth, 0).getDate();
+
+            let html = `
+                <div class="client-cal-day-header">Sun</div>
+                <div class="client-cal-day-header">Mon</div>
+                <div class="client-cal-day-header">Tue</div>
+                <div class="client-cal-day-header">Wed</div>
+                <div class="client-cal-day-header">Thu</div>
+                <div class="client-cal-day-header">Fri</div>
+                <div class="client-cal-day-header">Sat</div>
+            `;
+
+            for (let i = firstDayIndex - 1; i >= 0; i--) {
+                html += `<div class="client-cal-cell other-month"><div class="client-cal-number">${prevMonthDays - i}</div></div>`;
+            }
+
+            const today = new Date();
+
+            for (let day = 1; day <= totalDays; day++) {
+                const dateStr = `${clientYear}-${String(clientMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayEvents = events.filter(e => e.date === dateStr);
+                const isToday = today.getFullYear() === clientYear && today.getMonth() === clientMonth && today.getDate() === day;
+
+                let eventTags = dayEvents.map(e => {
+                    let pillClass = 'pill-busy';
+                    if (e.type === 'open') pillClass = 'pill-open';
+                    else if (e.type === 'general') pillClass = 'pill-general';
+                    return `<span class="client-event-pill ${pillClass}">${escapeHtml(e.title)}</span>`;
+                }).join('');
+
+                html += `
+                    <div class="client-cal-cell ${isToday ? 'today' : ''}">
+                        <div class="client-cal-number">${day}</div>
+                        ${eventTags}
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
+
