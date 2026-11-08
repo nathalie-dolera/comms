@@ -100,24 +100,11 @@
             const polaroidImg = document.getElementById('polaroid-profile-img');
             if (!polaroidImg) return;
 
-            // 1. Check logged-in admin session
-            const session = Storage.get(Storage.KEYS.ADMIN_SESSION, null);
-            if (session && session.avatar) {
-                polaroidImg.src = session.avatar;
+            if (settings && settings.homepageImage) {
+                polaroidImg.src = settings.homepageImage;
                 return;
             }
-
-            // 2. Check registered commissioner accounts for custom avatar
-            const users = Storage.get(Storage.KEYS.ADMIN_USERS, []);
-            if (Array.isArray(users) && users.length > 0) {
-                const userWithAvatar = users.slice().reverse().find(u => u.avatar && typeof u.avatar === 'string' && u.avatar.trim().length > 0);
-                if (userWithAvatar) {
-                    polaroidImg.src = userWithAvatar.avatar;
-                    return;
-                }
-            }
-
-            // Default fallback is person icon
+            // Use the person icon unless an image was explicitly chosen in Edit About.
             polaroidImg.src = 'assets/images/default-person.svg';
         });
     </script>

@@ -1531,6 +1531,7 @@ function renderAboutCardHtml(sec, index) {
 function renderAboutSections() {
     const container = document.getElementById('about-sections-container');
     if (!container) return;
+    syncHomepageImagePreview();
     const sections = getAboutSections();
 
     const cardsHtml = sections.map((sec, idx) => renderAboutCardHtml(sec, idx)).join('');
@@ -1760,6 +1761,47 @@ function saveSiteBrandingSettings(showToastMsg = true) {
     if (showToastMsg) {
         showToast('Homepage Portfolio Title updated successfully!');
     }
+}
+
+function syncHomepageImagePreview() {
+    const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, {}) || {};
+    const wrap = document.getElementById('homepage-image-preview-wrap');
+    const img = document.getElementById('homepage-image-preview');
+    if (settings.homepageImage) {
+        if (img) img.src = settings.homepageImage;
+        if (wrap) wrap.style.display = 'flex';
+    } else if (wrap) {
+        wrap.style.display = 'none';
+    }
+}
+
+function handleHomepageImageUpload(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+        showToast('Choose an image file to upload.');
+        event.target.value = '';
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+        const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, {}) || {};
+        settings.homepageImage = reader.result;
+        Storage.set(Storage.KEYS.SITE_SETTINGS, settings);
+        syncHomepageImagePreview();
+        showToast('Homepage image uploaded.');
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeHomepageImage() {
+    const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, {}) || {};
+    delete settings.homepageImage;
+    Storage.set(Storage.KEYS.SITE_SETTINGS, settings);
+    const input = document.getElementById('homepage-image-file');
+    if (input) input.value = '';
+    syncHomepageImagePreview();
+    showToast('Homepage image removed.');
 }
 
 function handleAboutPageImageUpload(event) {
@@ -3154,13 +3196,13 @@ function renderAccountApprovals() {
                         <td style="padding:12px 10px;color:var(--maroon-dark);font-weight:500;">${escapeHtml(row.name)}<div style="font-size:10px;color:#8c5b52;text-transform:uppercase;">${row.type}</div></td>
                         <td style="padding:12px 10px;color:#7a5048;">${dateLabel}</td>
                         <td style="padding:12px 10px;text-align:center;">
-                            <select class="account-status-select" onchange="setAccountPayment('${row.type}','${safeKey}',this.value)" aria-label="Payment status for ${escapeHtml(row.name)}">
+                            <select class="account-status-select payment-status-select ${row.paid ? 'paid' : 'not-paid'}" onchange="setAccountPayment('${row.type}','${safeKey}',this.value)" aria-label="Payment status for ${escapeHtml(row.name)}">
                                 <option value="not_paid" ${paymentValue === 'not_paid' ? 'selected' : ''}>Not paid</option>
                                 <option value="paid" ${paymentValue === 'paid' ? 'selected' : ''}>Paid</option>
                             </select>
                         </td>
                         <td style="padding:12px 10px;text-align:center;">
-                            <select class="account-status-select" onchange="setAccountApproval(${actionArg},this.value)" aria-label="Approval decision for ${escapeHtml(row.name)}">
+                            <select class="account-status-select decision-status-select ${decisionValue}" onchange="setAccountApproval(${actionArg},this.value)" aria-label="Approval decision for ${escapeHtml(row.name)}">
                                 <option value="pending" ${decisionValue === 'pending' ? 'selected' : ''}>Pending</option>
                                 <option value="approved" ${decisionValue === 'approved' ? 'selected' : ''}>Approved</option>
                                 <option value="declined" ${decisionValue === 'declined' ? 'selected' : ''}>Declined</option>

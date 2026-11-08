@@ -492,6 +492,26 @@ body.admin-body::before {
     outline-offset: 2px;
 }
 
+.payment-status-select.paid,
+.decision-status-select.approved {
+    background-color: #e5f5e9;
+    border-color: #2e8b57;
+    color: #17633a;
+}
+
+.payment-status-select.not-paid,
+.decision-status-select.pending {
+    background-color: #fff4cc;
+    border-color: #d4a017;
+    color: #795800;
+}
+
+.decision-status-select.declined {
+    background-color: #fde7e7;
+    border-color: #c84444;
+    color: #922d2d;
+}
+
 .auth-forgot-link {
     margin: -8px 0 16px;
     text-align: right;
