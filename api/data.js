@@ -27,6 +27,21 @@ module.exports = async (req, res) => {
       const filter = visibleKeys ? { key: { $in: visibleKeys } } : {};
       const rows = await db.collection('appData').find(filter).toArray();
       const data = Object.fromEntries(rows.map(row => [row.key, row.value]));
+      // Merge accepted commission deadlines into calendar events for client & admin calendars
+      const subRow = await db.collection('appData').findOne({ key: 'thalie_submissions' });
+      const allSubs = Array.isArray(subRow?.value) ? subRow.value : [];
+      const acceptedDeadlines = allSubs
+        .filter(s => s.deadline && (s.status === 'Accepted' || s.status === 'In Progress' || s.status === 'Done'))
+        .map(s => ({
+          id: 'comm-dl-' + s.id,
+          date: String(s.deadline).slice(0, 10),
+          title: `Deadline: ${s.name} (${s.service || 'Commission'})`,
+          type: 'deadline',
+          status: 'busy'
+        }));
+      const baseEvents = Array.isArray(data.thalie_calendar_events) ? data.thalie_calendar_events : [];
+      data.thalie_calendar_events = [...baseEvents.filter(e => !e.id?.startsWith('comm-dl-')), ...acceptedDeadlines];
+
       if (session?.role === 'admin') {
         const users = await db.collection('users').find({ role: 'commissioner' }, {
           projection: { passwordHash: 0 }
@@ -45,7 +60,7 @@ module.exports = async (req, res) => {
     if (!ALLOWED.has(key) || key === 'thalie_admin_users' || key === 'thalie_client_accounts' || (session.role !== 'admin' && !STAFF_WRITE.has(key))) {
       return send(res, 400, { error: 'That data set cannot be changed through this endpoint.' });
     }
-    if (JSON.stringify(value).length > 1_500_000) return send(res, 413, { error: 'This data set is too large.' });
+    if (JSON.stringify(value).length > 4_500_000) return send(res, 413, { error: 'This data set is too large.' });
     await db.collection('appData').updateOne(
       { key },
       { $set: { value, updatedAt: new Date(), updatedBy: session.id } },

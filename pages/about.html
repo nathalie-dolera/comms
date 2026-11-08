@@ -38,6 +38,9 @@
             .about-public-grid {
                 grid-template-columns: 1fr;
             }
+            .about-public-grid .paper-note {
+                max-width: 100% !important;
+            }
         }
     </style>
 </head>
@@ -93,7 +96,7 @@
             return [];
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        function renderAboutPage() {
             const data = Storage.get(Storage.KEYS.ABOUT, null);
             const sections = getAboutSections(data);
             const container = document.getElementById('about-cards-container');
@@ -101,11 +104,14 @@
             if (container && sections.length) {
                 const validSections = sections.filter(s => (s.title && s.title.trim()) || (s.items && s.items.length) || s.image);
 
-                container.innerHTML = validSections.map(sec => {
-                    const cardStyle = 'background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18); backdrop-filter: blur(5px); box-shadow: 0 4px 15px rgba(0,0,0,0.2); padding: 30px 34px; border-radius: 6px; color: #fff; height: 100%; min-height: 280px; box-sizing: border-box; display: flex; flex-direction: column;';
-                    const titleStyle = "font-family:'Special Elite', monospace; font-size: 19px; text-transform: uppercase; color: #f2a6a0; letter-spacing: 2px; margin-bottom: 8px; margin-top: 0;";
-                    const subtitleStyle = 'font-style: italic; font-size: 13.5px; color: #e8d0cb; margin-bottom: 14px; margin-top: 0;';
-                    const listColor = 'color: #f8efe6;';
+                const isOdd = validSections.length % 2 === 1;
+                container.innerHTML = validSections.map((sec, idx) => {
+                    const isLastOdd = isOdd && idx === validSections.length - 1;
+                    const orphanStyle = isLastOdd ? 'grid-column: 1 / -1; justify-self: center; width: 100%; max-width: calc(50% - 12px);' : '';
+                    const cardStyle = `background: #fdfaf6; border: 1px solid #dcd0c2; box-shadow: 0 4px 15px rgba(0,0,0,0.12); padding: 30px 34px; border-radius: 6px; color: #3b221e; height: 100%; min-height: 280px; box-sizing: border-box; display: flex; flex-direction: column; ${orphanStyle}`;
+                    const titleStyle = "font-family:'Special Elite', monospace; font-size: 18px; text-transform: uppercase; color: #6b1814; letter-spacing: 2px; margin-bottom: 8px; margin-top: 0;";
+                    const subtitleStyle = 'font-style: italic; font-size: 13.5px; color: #5a2e2e; margin-bottom: 12px; margin-top: 0;';
+                    const listColor = 'color: #3b221e;';
 
                     // Inner text markup
                     const textContent = `
@@ -127,7 +133,7 @@
                                         ${textContent}
                                     </div>
                                     <div style="flex-shrink: 0; text-align: center;">
-                                        <img src="${escapeHtml(sec.image)}" alt="${escapeHtml(sec.title || 'Image')}" style="max-width: 140px; max-height: 180px; object-fit: cover; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.3); display: block;">
+                                        <img src="${escapeHtml(sec.image)}" alt="${escapeHtml(sec.title || 'Image')}" style="max-width: 140px; max-height: 180px; object-fit: cover; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 1px solid #dcd0c2; display: block;">
                                     </div>
                                 </div>
                             </div>
@@ -190,7 +196,10 @@
                     }).join('');
                 }
             }
-        });
+        }
+
+        renderAboutPage();
+        document.addEventListener('DOMContentLoaded', renderAboutPage);
     </script>
 </body>
 

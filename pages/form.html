@@ -169,11 +169,11 @@
 
                     <!-- Admin Payment QR Code Section (Only appears when accepted) -->
                     <div id="admin-payment-qr-wrap" style="display: none; background: #ffffff; border: 2px solid var(--maroon); border-radius: 6px; padding: 18px; margin: 18px 0; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.06);">
-                        <div style="font-family:'Special Elite', monospace; font-size: 14.5px; color: var(--maroon-dark); font-weight: bold; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px;">
+                        <div id="admin-payment-qr-title" style="font-family:'Special Elite', monospace; font-size: 14.5px; color: var(--maroon-dark); font-weight: bold; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px;">
                             📱 Scan Admin QR Code to Pay
                         </div>
                         <p style="font-size: 12px; color: #7a5048; margin: 0 0 14px;">
-                            Scan this QR code using your GCash, Maya, or Bank app. After payment, upload your receipt screenshot below!
+                            Scan this QR code using your payment app. After payment, upload your receipt screenshot below!
                         </p>
                         <div style="display: inline-block; background: #fff; padding: 8px; border: 1px dashed var(--rose); border-radius: 6px;">
                             <img id="admin-payment-qr-img" src="" alt="Admin Payment QR Code" style="max-height: 220px; max-width: 100%; border-radius: 4px; display: block;">
@@ -214,11 +214,12 @@
                             </div>
                             <div class="form-group">
                                 <label for="payment-mode-select">Mode of Payment</label>
-                                <select id="payment-mode-select" name="payment-mode-select" onchange="togglePaymentProofOther(this.value)">
+                                <select id="payment-mode-select" name="payment-mode-select" onchange="handlePaymentModeChange(this.value)">
                                     <option value="GCash" selected>GCash</option>
                                     <option value="Maya">Maya</option>
                                     <option value="PayPal">PayPal</option>
                                     <option value="Maribank">Maribank</option>
+                                    <option value="Bank Transfer">Bank Transfer</option>
                                     <option value="Other">Other (specify)</option>
                                 </select>
                                 <input type="text" id="payment-proof-other-input" placeholder="Type payment method (e.g. BDO, BPI)" style="display:none; margin-top:8px;">
@@ -519,14 +520,8 @@
                     `;
                 }
 
-                // Show Admin QR Code if configured
-                const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, {}) || {};
-                if (settings.paymentQrCode && qrWrap && qrImg) {
-                    qrImg.src = settings.paymentQrCode;
-                    qrWrap.style.display = 'block';
-                } else if (qrWrap) {
-                    qrWrap.style.display = 'none';
-                }
+                // Show matching Admin QR Code for selected mode
+                updateDisplayedQrCode();
 
                 // Update hints & default amount
                 const dpAmount = agreed > 0 ? (agreed * 0.5) : 500;
@@ -567,6 +562,42 @@
                 inputsContainer.style.opacity = '0.5';
                 inputsContainer.style.pointerEvents = 'none';
             }
+        }
+
+        function updateDisplayedQrCode() {
+            if (!currentApprovedCommission) return;
+            const qrWrap = document.getElementById('admin-payment-qr-wrap');
+            const qrImg = document.getElementById('admin-payment-qr-img');
+            const qrTitle = document.getElementById('admin-payment-qr-title');
+            if (!qrWrap || !qrImg) return;
+
+            const modeSelect = document.getElementById('payment-mode-select');
+            const selectedMode = (modeSelect ? modeSelect.value : 'GCash').trim();
+
+            const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, {}) || {};
+            const qrs = Array.isArray(settings.paymentQrs) ? settings.paymentQrs : [];
+
+            // Find matching QR by method name
+            let match = qrs.find(q => q.method.toLowerCase() === selectedMode.toLowerCase());
+            if (!match && selectedMode === 'GCash' && settings.paymentQrCode) {
+                match = { method: 'GCash', image: settings.paymentQrCode };
+            } else if (!match && qrs.length > 0) {
+                // Fallback to first available if custom mode selected
+                match = qrs[0];
+            }
+
+            if (match && match.image) {
+                qrImg.src = match.image;
+                if (qrTitle) qrTitle.textContent = `📱 Scan ${escapeHtml(match.method)} QR Code to Pay`;
+                qrWrap.style.display = 'block';
+            } else {
+                qrWrap.style.display = 'none';
+            }
+        }
+
+        function handlePaymentModeChange(val) {
+            togglePaymentProofOther(val);
+            updateDisplayedQrCode();
         }
 
         // ============================================

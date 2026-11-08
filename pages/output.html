@@ -496,10 +496,12 @@
         let activeLightboxItem = null;
         let activeLightboxSampleIndex = 0;
 
-        document.addEventListener('DOMContentLoaded', () => {
+        function initOutputGallery() {
             renderFilterBar();
             renderGallery();
-        });
+        }
+        initOutputGallery();
+        document.addEventListener('DOMContentLoaded', initOutputGallery);
 
         function renderFilterBar() {
             const filterContainer = document.getElementById('output-filter-bar');
@@ -546,6 +548,9 @@
             }
             if (item.coverImage) {
                 return [item.coverImage];
+            }
+            if (item.image) {
+                return [item.image];
             }
             return [];
         }

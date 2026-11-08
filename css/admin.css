@@ -1148,6 +1148,18 @@ body.admin-body::before {
     letter-spacing: 0.5px;
 }
 
+.status-pending {
+    background: #fff8e1;
+    color: #b78103;
+    border: 1px solid #ffe082;
+}
+
+.status-declined {
+    background: #fbe9e7;
+    color: #c62828;
+    border: 1px solid #ffab91;
+}
+
 .status-accepted {
     background: #fef5e7;
     color: #b7791f;

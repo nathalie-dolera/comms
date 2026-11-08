@@ -6,6 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Terms &amp; Conditions - Portfolio</title>
     <link rel="stylesheet" href="../css/style.css">
+    <style>
+        @media (max-width: 900px) {
+            #terms-cards-container {
+                grid-template-columns: 1fr !important;
+            }
+            #terms-cards-container .paper-note {
+                max-width: 100% !important;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -85,7 +95,7 @@
             return null;
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        function renderTermsPage() {
             const rawData = Storage.get(Storage.KEYS.TERMS, null);
             const data = getTermsData(rawData);
             if (!data) return;
@@ -122,8 +132,12 @@
             const validSections = data.sections.filter(s => (s.title && s.title.trim()) || (s.items && s.items.length));
             if (!validSections.length) return;
 
-            container.innerHTML = validSections.map(sec => `
-                <div class="paper-note" style="margin-bottom: 0; background: #fdfaf6; border: 1px solid #dcd0c2; box-shadow: 0 4px 15px rgba(0,0,0,0.12); padding: 30px 34px; border-radius: 6px; height: 100%; min-height: 280px; box-sizing: border-box; display: flex; flex-direction: column;">
+            const isOdd = validSections.length % 2 === 1;
+            container.innerHTML = validSections.map((sec, idx) => {
+                const isLastOdd = isOdd && idx === validSections.length - 1;
+                const orphanStyle = isLastOdd ? 'grid-column: 1 / -1; justify-self: center; width: 100%; max-width: calc(50% - 12px);' : '';
+                return `
+                <div class="paper-note" style="margin-bottom: 0; background: #fdfaf6; border: 1px solid #dcd0c2; box-shadow: 0 4px 15px rgba(0,0,0,0.12); padding: 30px 34px; border-radius: 6px; height: 100%; min-height: 280px; box-sizing: border-box; display: flex; flex-direction: column; ${orphanStyle}">
                     ${sec.title ? `<h3 style="font-family:'Special Elite', monospace; font-size: 16px; text-transform: uppercase; color: #6b1814; letter-spacing: 2px; margin-bottom: 8px; border-bottom: none; padding-bottom: 0;">${escapeHtml(sec.title)}</h3>` : ''}
                     ${sec.subtitle ? `<p style="font-style: italic; font-size: 13.5px; color: #5a2e2e; margin-bottom: 12px; margin-top: 0;">${escapeHtml(sec.subtitle)}</p>` : ''}
                     ${sec.items && sec.items.length ? `
@@ -131,8 +145,12 @@
                         ${sec.items.map(p => `<li>${escapeHtml(p)}</li>`).join('')}
                     </ul>` : ''}
                 </div>
-            `).join('');
-        });
+                `;
+            }).join('');
+        }
+
+        renderTermsPage();
+        document.addEventListener('DOMContentLoaded', renderTermsPage);
     </script>
 </body>
 

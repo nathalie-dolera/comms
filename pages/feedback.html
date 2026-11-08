@@ -350,9 +350,8 @@
             return `${maskedFirst} ${initialLast}`;
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            renderFeedbacks();
-        });
+        renderFeedbacks();
+        document.addEventListener('DOMContentLoaded', renderFeedbacks);
 
         function renderFeedbacks() {
             const list = Storage.get(Storage.KEYS.FEEDBACKS, []);

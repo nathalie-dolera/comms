@@ -93,8 +93,7 @@
 
     <script src="js/storage.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Update Title if custom set
+        function updateHomeDisplay() {
             const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, null);
             const titleEl = document.getElementById('home-portfolio-title');
             if (titleEl && settings && settings.portfolioTitle) {
@@ -104,13 +103,17 @@
             const polaroidImg = document.getElementById('polaroid-profile-img');
             if (!polaroidImg) return;
 
-            if (settings && settings.homepageImage) {
-                polaroidImg.src = settings.homepageImage;
-                return;
+            const imgSrc = settings?.homepageImage || settings?.profileImage;
+            if (imgSrc) {
+                polaroidImg.src = imgSrc;
+            } else {
+                polaroidImg.src = 'assets/images/default-person.svg';
             }
-            // Use the person icon unless an image was explicitly chosen in Edit About.
-            polaroidImg.src = 'assets/images/default-person.svg';
-        });
+        }
+
+        // Render immediately with local cache, then update on DOM load and when storage syncs
+        updateHomeDisplay();
+        document.addEventListener('DOMContentLoaded', updateHomeDisplay);
     </script>
 </body>
 </html>

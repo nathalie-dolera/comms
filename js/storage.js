@@ -16,6 +16,39 @@ const Storage = {
     lastError: null,
     writes: {},
 
+    initLocalCache() {
+        try {
+            const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('thalie_public_cache') : null;
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed && typeof parsed === 'object') {
+                    this.cache = Object.assign({}, parsed);
+                }
+            }
+        } catch (e) {
+            console.warn('Could not read local cache:', e);
+        }
+    },
+
+    saveLocalCache() {
+        try {
+            if (typeof localStorage === 'undefined') return;
+            const publicKeys = [
+                this.KEYS.SITE_SETTINGS, this.KEYS.ABOUT, this.KEYS.TERMS,
+                this.KEYS.OUTPUTS, this.KEYS.OUTPUT_CATEGORIES, this.KEYS.FEEDBACKS,
+                this.KEYS.CALENDAR, this.KEYS.SERVICES, this.KEYS.THEME,
+                this.KEYS.DEFAULT_FEEDBACK_IMAGE
+            ];
+            const toSave = {};
+            for (const k of publicKeys) {
+                if (this.cache[k] !== undefined) toSave[k] = this.cache[k];
+            }
+            localStorage.setItem('thalie_public_cache', JSON.stringify(toSave));
+        } catch (e) {
+            console.warn('Could not save local cache:', e);
+        }
+    },
+
     async request(path, options = {}) {
         const response = await fetch(path, {
             credentials: 'same-origin',
@@ -33,7 +66,10 @@ const Storage = {
             this.request('/api/data').catch(error => ({ data: {}, error }))
         ]);
         this.user = authResult.user || null;
-        this.cache = dataResult.data || {};
+        if (dataResult.data && typeof dataResult.data === 'object') {
+            this.cache = Object.assign({}, this.cache, dataResult.data);
+            this.saveLocalCache();
+        }
         this.cache[this.KEYS.ADMIN_SESSION] = this.user;
         this.lastError = authResult.error || dataResult.error || null;
         if (this.lastError) {
@@ -42,6 +78,8 @@ const Storage = {
         } else {
             delete document.documentElement.dataset.dataStatus;
         }
+        this.applyTheme(this.getTheme());
+        document.dispatchEvent(new CustomEvent('storageready', { detail: this.cache }));
         return this;
     },
 
@@ -54,6 +92,7 @@ const Storage = {
         if (key === this.KEYS.ADMIN_SESSION || key === this.KEYS.ADMIN_USERS) return;
         const oldValue = this.cache[key];
         this.cache[key] = value;
+        this.saveLocalCache();
         const previousWrite = this.writes[key] || Promise.resolve();
         const nextWrite = previousWrite.catch(() => {}).then(() => this.request('/api/data', {
             method: 'PUT', body: JSON.stringify({ key, value })
@@ -62,6 +101,7 @@ const Storage = {
         nextWrite.catch(error => {
             if (oldValue === undefined) delete this.cache[key];
             else this.cache[key] = oldValue;
+            this.saveLocalCache();
             this.lastError = error;
             document.dispatchEvent(new CustomEvent('storageerror', { detail: { key, message: error.message } }));
         });
@@ -155,8 +195,8 @@ const Storage = {
         return this.request('/api/feedback', { method: 'POST', body: JSON.stringify(data) });
     },
 
-    async trackCommission(id) {
-        return this.request(`/api/track?id=${encodeURIComponent(id)}`);
+    async trackCommission(query) {
+        return this.request(`/api/track?name=${encodeURIComponent(query)}`);
     },
 
     resolveAssetPath(path) {
@@ -189,19 +229,42 @@ const Storage = {
     }
 };
 
-// Hydrate the in-memory cache before page renderers run on DOMContentLoaded.
+// Synchronously hydrate in-memory cache from localStorage (instant 0ms render)
+Storage.initLocalCache();
+Storage.applyTheme(Storage.getTheme());
+
+// Asynchronously sync with server in background
 Storage.ready = Storage.refresh();
+
+// Helper for pages to run immediately on DOM ready and re-run when server data syncs
+Storage.onReady = function(fn) {
+    if (typeof fn !== 'function') return;
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => fn(Storage.cache));
+    } else {
+        fn(Storage.cache);
+    }
+    Storage.ready.then(() => fn(Storage.cache)).catch(() => {});
+};
+
+// Enhance DOMContentLoaded listeners so they run immediately with local cache,
+// and re-run seamlessly once fresh server data arrives.
 const nativeDocumentAddEventListener = document.addEventListener.bind(document);
 document.addEventListener = function(type, listener, options) {
     if (type !== 'DOMContentLoaded') return nativeDocumentAddEventListener(type, listener, options);
-    return nativeDocumentAddEventListener(type, event => {
-        Storage.ready.finally(() => {
-            if (typeof listener === 'function') listener.call(document, event);
-            else listener?.handleEvent?.(event);
-        });
+    
+    // Run immediately on DOM ready:
+    nativeDocumentAddEventListener('DOMContentLoaded', event => {
+        if (typeof listener === 'function') listener.call(document, event);
+        else listener?.handleEvent?.(event);
     }, options);
+
+    // Also re-run when server data arrives:
+    Storage.ready.then(() => {
+        if (typeof listener === 'function') listener.call(document, new CustomEvent('storageready'));
+        else listener?.handleEvent?.(new CustomEvent('storageready'));
+    }).catch(() => {});
 };
-Storage.ready.then(() => Storage.applyTheme(Storage.getTheme()));
 
 document.addEventListener('storageerror', event => {
     console.error(`Could not save ${event.detail.key}:`, event.detail.message);

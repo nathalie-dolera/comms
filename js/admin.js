@@ -480,6 +480,7 @@ function renderSubmissions() {
         const isFullyPaid = sub.paymentType === 'fully_paid';
         const paymentLabel = isFullyPaid ? 'Fully Paid' : '50% DP';
         const badgeClass = isFullyPaid ? 'badge-fully-paid' : 'badge-downpayment';
+        const isPending = !sub.status || sub.status === 'Pending';
 
         return `
         <tr>
@@ -494,12 +495,19 @@ function renderSubmissions() {
                 <span class="payment-badge ${badgeClass}">${paymentLabel}</span>
             </td>
             <td>
-                <select class="btn-status-select ${getStatusPillClass(sub.status)}" 
+                ${isPending ? `
+                    <button type="button" class="btn-action" onclick="acceptCommission('${sub.id}')" style="background:#2e7d32; color:#fff; font-weight:700; padding:5px 10px; font-size:11px; margin-bottom:5px; display:block; width:100%; border:none; border-radius:4px; cursor:pointer; text-transform:uppercase; letter-spacing:0.5px;">
+                        ✓ Accept
+                    </button>
+                ` : ''}
+                <select class="btn-status-select ${getStatusPillClass(sub.status || 'Pending')}" 
                         onchange="changeCommissionStatus('${sub.id}', this.value)">
+                    <option value="Pending" ${isPending ? 'selected' : ''}>Pending Review</option>
                     <option value="Accepted" ${sub.status === 'Accepted' ? 'selected' : ''}>Accepted</option>
                     <option value="In Progress" ${sub.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
                     <option value="Done" ${sub.status === 'Done' ? 'selected' : ''}>Done</option>
                     <option value="Turned Over" ${sub.status === 'Turned Over' ? 'selected' : ''}>Turned Over</option>
+                    <option value="Declined" ${sub.status === 'Declined' ? 'selected' : ''}>Declined</option>
                 </select>
             </td>
             <td>
@@ -512,6 +520,18 @@ function renderSubmissions() {
     updateBadges();
 }
 
+function acceptCommission(id) {
+    const list = Storage.get(Storage.KEYS.SUBMISSIONS, []);
+    const item = list.find(s => s.id === id);
+    if (item) {
+        item.status = 'Accepted';
+        Storage.set(Storage.KEYS.SUBMISSIONS, list);
+        showToast(`Commission accepted for ${item.name}! Deadline scheduled on calendar.`);
+        renderSubmissions();
+        renderCalendar();
+    }
+}
+
 function changeCommissionStatus(id, newStatus) {
     const list = Storage.get(Storage.KEYS.SUBMISSIONS, []);
     const item = list.find(s => s.id === id);
@@ -520,6 +540,7 @@ function changeCommissionStatus(id, newStatus) {
         Storage.set(Storage.KEYS.SUBMISSIONS, list);
         showToast(`Status updated to "${newStatus}" for ${item.name}`);
         renderSubmissions();
+        renderCalendar();
     }
 }
 
@@ -608,7 +629,10 @@ function viewSubmissionDetail(id) {
             </div>
         </div>
 
-        <div style="margin-top: 22px; display: flex; justify-content: flex-end; gap: 10px;">
+        <div style="margin-top: 22px; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;">
+            ${(!sub.status || sub.status === 'Pending') ? `
+                <button class="btn-action" style="background:#2e7d32; color:#fff; font-weight:700;" onclick="acceptCommission('${sub.id}'); closeModal('modal-view-submission');">✓ Accept Commission</button>
+            ` : ''}
             <button class="btn-action btn-secondary" onclick="recordPaymentFromCommission('${sub.id}')">+ Log Payment in Sheet</button>
             <button class="btn-action btn-primary" onclick="closeModal('modal-view-submission')">Close</button>
         </div>
@@ -1198,24 +1222,69 @@ function openAddOutputModal() {
     openModal('modal-add-output');
 }
 
-function previewOutputSamples(event) {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-
-    let loadedCount = 0;
-    const total = files.length;
-
-    Array.from(files).forEach(file => {
+function compressImageFile(file, maxWidth = 1200, quality = 0.82) {
+    return new Promise((resolve, reject) => {
+        if (!file || !file.type.startsWith('image/')) {
+            return reject(new Error('File is not an image'));
+        }
         const reader = new FileReader();
+        reader.onerror = reject;
         reader.onload = function(e) {
-            tempOutputSamples.push(e.target.result);
-            loadedCount++;
-            if (loadedCount === total) {
-                renderOutputSamplesPreview();
-            }
+            const img = new Image();
+            img.onerror = () => resolve(e.target.result);
+            img.onload = function() {
+                try {
+                    let w = img.width;
+                    let h = img.height;
+                    if (w > maxWidth || h > maxWidth) {
+                        if (w > h) {
+                            h = Math.round((h * maxWidth) / w);
+                            w = maxWidth;
+                        } else {
+                            w = Math.round((w * maxWidth) / h);
+                            h = maxWidth;
+                        }
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    const format = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+                    const dataUrl = canvas.toDataURL(format, quality);
+                    resolve(dataUrl);
+                } catch (err) {
+                    resolve(e.target.result);
+                }
+            };
+            img.src = e.target.result;
         };
         reader.readAsDataURL(file);
     });
+}
+
+async function previewOutputSamples(event) {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const hint = document.getElementById('out-samples-empty-hint');
+    if (hint) hint.textContent = 'Processing and optimizing photos...';
+
+    for (const file of Array.from(files)) {
+        try {
+            const optimized = await compressImageFile(file, 1200, 0.82);
+            tempOutputSamples.push(optimized);
+        } catch (err) {
+            const raw = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+            tempOutputSamples.push(raw);
+        }
+    }
+    renderOutputSamplesPreview();
 }
 
 function renderOutputSamplesPreview() {
@@ -1245,6 +1314,10 @@ function handleSaveOutput(event) {
     event.preventDefault();
     const title = document.getElementById('out-title').value.trim();
     const category = document.getElementById('out-category').value;
+    if (!tempOutputSamples.length) {
+        alert('Please choose at least one photo for this output.');
+        return;
+    }
     const list = Storage.get(Storage.KEYS.OUTPUTS, []);
     const now = new Date().toISOString().split('T')[0];
 
@@ -1300,7 +1373,18 @@ function renderCalendar() {
     const container = document.getElementById('calendar-admin-grid');
     if (!container) return;
 
-    const events = Storage.get(Storage.KEYS.CALENDAR, []);
+    const baseEvents = Storage.get(Storage.KEYS.CALENDAR, []);
+    const subs = Storage.get(Storage.KEYS.SUBMISSIONS, []);
+    const commDeadlines = subs
+        .filter(s => s.deadline && (s.status === 'Accepted' || s.status === 'In Progress' || s.status === 'Done'))
+        .map(s => ({
+            id: 'comm-dl-' + s.id,
+            date: String(s.deadline).slice(0, 10),
+            title: `Deadline: ${s.name} (${s.service || 'Commission'})`,
+            type: 'deadline',
+            isCommission: true
+        }));
+    const events = [...baseEvents.filter(e => !e.id?.startsWith('comm-dl-')), ...commDeadlines];
 
     const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
     const totalDays = new Date(currentYear, currentMonth + 1, 0).getDate();
@@ -1333,7 +1417,10 @@ function renderCalendar() {
             let tagClass = 'tag-general';
             if (e.type === 'deadline') tagClass = 'tag-deadline';
             if (e.type === 'open') tagClass = 'tag-available';
-            return `<div class="calendar-event-tag ${tagClass}" onclick="event.stopPropagation(); deleteEvent('${e.id}')" title="Click to delete">${e.title} ×</div>`;
+            if (e.isCommission) {
+                return `<div class="calendar-event-tag ${tagClass}" style="cursor:default;" title="Accepted Commission Deadline">${escapeHtml(e.title)}</div>`;
+            }
+            return `<div class="calendar-event-tag ${tagClass}" onclick="event.stopPropagation(); deleteEvent('${e.id}')" title="Click to delete">${escapeHtml(e.title)} ×</div>`;
         }).join('');
 
         html += `
@@ -2969,58 +3056,113 @@ function exportPaymentsToCSV() {
 }
 
 // ============================================
-// PAYMENT QR CODE MANAGEMENT
+// PAYMENT QR CODE MANAGEMENT (MULTI-QR SUPPORT)
 // ============================================
 
-function loadPaymentQrCode() {
-    const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, {}) || {};
-    const img = document.getElementById('payment-qr-img');
-    const emptyText = document.getElementById('payment-qr-empty-text');
-    const btnRemove = document.getElementById('btn-remove-qr');
-    if (settings.paymentQrCode) {
-        if (img) {
-            img.src = settings.paymentQrCode;
-            img.style.display = 'block';
-        }
-        if (emptyText) emptyText.style.display = 'none';
-        if (btnRemove) btnRemove.style.display = 'inline-block';
-    } else {
-        if (img) {
-            img.src = '';
-            img.style.display = 'none';
-        }
-        if (emptyText) emptyText.style.display = 'block';
-        if (btnRemove) btnRemove.style.display = 'none';
+function toggleCustomQrMethod(val) {
+    const customInput = document.getElementById('new-qr-custom-method');
+    if (customInput) {
+        customInput.style.display = (val === 'Other') ? 'block' : 'none';
+        if (val !== 'Other') customInput.value = '';
     }
 }
 
-function handlePaymentQrUpload(event) {
-    const file = event.target.files && event.target.files[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-        showToast('Please upload a valid image file.');
+function getPaymentQrsList() {
+    const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, {}) || {};
+    let list = Array.isArray(settings.paymentQrs) ? settings.paymentQrs : [];
+    if (list.length === 0 && settings.paymentQrCode) {
+        list = [{ id: 'qr-default', method: 'GCash', image: settings.paymentQrCode }];
+    }
+    return list;
+}
+
+function loadPaymentQrCodes() {
+    const container = document.getElementById('payment-qrs-list');
+    if (!container) return;
+    const list = getPaymentQrsList();
+
+    if (list.length === 0) {
+        container.innerHTML = `
+            <div style="grid-column: 1 / -1; padding: 24px; text-align: center; color: #8c5b52; background: #fff; border: 1px dashed var(--rose); border-radius: 6px; font-family:'Special Elite', monospace; font-size: 13px;">
+                No payment QR codes added yet. Add QR codes below for GCash, Maya, Bank Transfer, etc.!
+            </div>
+        `;
         return;
     }
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, {}) || {};
-        settings.paymentQrCode = e.target.result;
-        Storage.set(Storage.KEYS.SITE_SETTINGS, settings);
-        loadPaymentQrCode();
-        showToast('Payment QR Code uploaded and saved!');
-    };
-    reader.readAsDataURL(file);
+
+    container.innerHTML = list.map((item, idx) => `
+        <div style="background: #ffffff; border: 1px solid #dcd0c2; border-radius: 6px; padding: 14px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); position: relative;">
+            <div style="font-family:'Special Elite', monospace; font-size: 14px; font-weight: bold; color: var(--maroon-dark); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+                ${escapeHtml(item.method)}
+            </div>
+            <div style="width: 140px; height: 140px; border: 1px dashed #dcd0c2; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #faf4ee; margin-bottom: 12px;">
+                <img src="${item.image}" alt="${escapeHtml(item.method)} QR" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+            </div>
+            <button type="button" class="btn-action btn-danger" onclick="deleteMultiPaymentQr(${idx})" style="padding: 4px 12px; font-size: 11px; width: 100%;">
+                Delete QR
+            </button>
+        </div>
+    `).join('');
 }
 
-function handleRemovePaymentQr() {
-    if (!confirm('Remove your payment QR code? Accepted clients will no longer see it.')) return;
+async function handleSaveMultiPaymentQr() {
+    const methodSelect = document.getElementById('new-qr-method');
+    const customMethodInput = document.getElementById('new-qr-custom-method');
+    let method = methodSelect?.value || 'GCash';
+    if (method === 'Other') {
+        method = customMethodInput?.value.trim() || 'Custom Mode';
+    }
+
+    const fileInput = document.getElementById('new-qr-file-input');
+    const file = fileInput?.files && fileInput.files[0];
+    if (!file) {
+        alert('Please choose an image file for the QR code.');
+        return;
+    }
+
+    try {
+        const optimizedImage = await compressImageFile(file, 800, 0.85);
+        const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, {}) || {};
+        const list = getPaymentQrsList();
+
+        const existingIdx = list.findIndex(q => q.method.toLowerCase() === method.toLowerCase());
+        if (existingIdx !== -1) {
+            list[existingIdx].image = optimizedImage;
+        } else {
+            list.push({ id: 'qr-' + Date.now(), method, image: optimizedImage });
+        }
+
+        settings.paymentQrs = list;
+        if (list[0]) settings.paymentQrCode = list[0].image;
+
+        Storage.set(Storage.KEYS.SITE_SETTINGS, settings);
+        if (fileInput) fileInput.value = '';
+        if (customMethodInput) customMethodInput.value = '';
+        if (methodSelect) methodSelect.value = 'GCash';
+        toggleCustomQrMethod('GCash');
+
+        showToast(`QR Code for "${method}" saved!`);
+        loadPaymentQrCodes();
+    } catch (err) {
+        alert('Could not save QR code: ' + err.message);
+    }
+}
+
+function deleteMultiPaymentQr(idx) {
+    if (!confirm('Remove this payment QR code?')) return;
     const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, {}) || {};
-    delete settings.paymentQrCode;
+    const list = getPaymentQrsList();
+    list.splice(idx, 1);
+    settings.paymentQrs = list;
+    if (list[0]) settings.paymentQrCode = list[0].image;
+    else delete settings.paymentQrCode;
     Storage.set(Storage.KEYS.SITE_SETTINGS, settings);
-    loadPaymentQrCode();
-    const input = document.getElementById('payment-qr-file-input');
-    if (input) input.value = '';
     showToast('Payment QR code removed.');
+    loadPaymentQrCodes();
+}
+
+function loadPaymentQrCode() {
+    loadPaymentQrCodes();
 }
 
 

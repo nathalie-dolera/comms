@@ -294,6 +294,12 @@
             color: #721c24;
         }
 
+        .pill-deadline {
+            background: #8b2622;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
         .pill-general {
             background: #d1ecf1;
             color: #0c5460;
@@ -353,7 +359,7 @@
         <div class="search-card">
             <h2 style="font-family: 'Special Elite', monospace; font-size: 18px; color: var(--maroon-dark); text-transform: uppercase; margin-bottom: 12px;">Track Your Commission</h2>
             <div class="search-form">
-                <input type="text" id="tracker-search-input" class="search-input" placeholder="Enter your private commission ID...">
+                <input type="text" id="tracker-search-input" class="search-input" placeholder="Enter your client name...">
                 <button class="search-btn" onclick="searchCommission()">Search Status</button>
             </div>
 
@@ -402,17 +408,20 @@
         let clientMonth = new Date().getMonth();
         let clientYear = new Date().getFullYear();
 
-        document.addEventListener('DOMContentLoaded', () => {
+        function initTracker() {
             renderClientCalendar();
 
-            // Auto check if URL has ?id=COM-XXXX
+            // Auto check if URL has ?name=... or ?q=... or ?id=...
             const urlParams = new URLSearchParams(window.location.search);
-            const queryId = urlParams.get('id');
-            if (queryId) {
-                document.getElementById('tracker-search-input').value = queryId;
+            const queryName = urlParams.get('name') || urlParams.get('q') || urlParams.get('id');
+            if (queryName) {
+                const input = document.getElementById('tracker-search-input');
+                if (input) input.value = queryName;
                 searchCommission();
             }
-        });
+        }
+        initTracker();
+        document.addEventListener('DOMContentLoaded', initTracker);
 
         function getStatusBadge(status) {
             switch(status) {
@@ -450,92 +459,98 @@
                 return;
             }
             resultBox.style.display = 'block';
-            resultBox.innerHTML = '<div style="text-align:center;padding:20px;color:#777;">Checking commission status…</div>';
+            resultBox.innerHTML = '<div style="text-align:center;padding:20px;color:#777;">Searching commission status…</div>';
             try {
-            const response = await Storage.trackCommission(query);
-            const match = response.commission;
-            if (!match) {
-                resultBox.innerHTML = `
-                    <div style="text-align: center; padding: 20px; color: #a94442;">
-                        <p style="font-weight: bold; font-size: 16px;">Commission not found.</p>
-                        <p style="font-size: 13px; color: #777;">Check the private commission ID from your confirmation.</p>
-                    </div>
-                `;
-                return;
-            }
+                const response = await Storage.trackCommission(query);
+                const list = (response && Array.isArray(response.commissions) && response.commissions.length > 0)
+                    ? response.commissions
+                    : (response && response.commission ? [response.commission] : []);
 
-            // Calculate progress steps
-            const statuses = ['Accepted', 'In Progress', 'Done', 'Turned Over'];
-            const currentIndex = statuses.indexOf(match.status);
-            const fillPercent = currentIndex >= 0 ? (currentIndex / 3) * 100 : 0;
+                if (!list.length) {
+                    resultBox.innerHTML = `
+                        <div style="text-align: center; padding: 20px; color: #a94442;">
+                            <p style="font-weight: bold; font-size: 16px;">No commissions found.</p>
+                            <p style="font-size: 13px; color: #777;">Make sure you entered your correct client name.</p>
+                        </div>
+                    `;
+                    return;
+                }
 
-            const paidAmount = Number(match.amountPaid) || 0;
-            const agreedAmount = Number(match.agreedPrice) || 0;
-            const balanceAmount = Math.max(0, Number(match.balance) || agreedAmount - paidAmount);
-            const isFullyPaid = (match.paymentType === 'fully_paid') || (balanceAmount === 0 && paidAmount > 0);
+                const statuses = ['Accepted', 'In Progress', 'Done', 'Turned Over'];
 
-            const statusLabel = isFullyPaid ? 'Fully Paid' : '50% DP';
+                resultBox.innerHTML = list.map(match => {
+                    const currentIndex = statuses.indexOf(match.status);
+                    const fillPercent = currentIndex >= 0 ? (currentIndex / 3) * 100 : 0;
+                    const paidAmount = Number(match.amountPaid) || 0;
+                    const agreedAmount = Number(match.agreedPrice) || 0;
+                    const balanceAmount = Math.max(0, Number(match.balance) || agreedAmount - paidAmount);
+                    const isFullyPaid = (match.paymentType === 'fully_paid') || (balanceAmount === 0 && paidAmount > 0);
+                    const statusLabel = isFullyPaid ? 'Fully Paid' : '50% DP';
 
-            resultBox.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 12px; margin-bottom: 15px;">
-                    <div>
-                <span style="font-size: 20px; font-weight: bold; color: var(--maroon);">${escapeHtml(match.service)}</span>
-                    </div>
-                    <div>${getStatusBadge(escapeHtml(match.status))}</div>
-                </div>
-
-                <!-- PROGRESS STEPPER -->
-                <div class="progress-stepper">
-                    <div class="progress-bar-fill" style="width: ${fillPercent}%;"></div>
-                    ${statuses.map((step, idx) => {
-                        let cls = '';
-                        let icon = idx + 1;
-                        if (idx < currentIndex) {
-                            cls = 'completed';
-                            icon = 'OK';
-                        } else if (idx === currentIndex) {
-                            cls = 'active';
-                            icon = '●';
-                        }
-                        return `
-                            <div class="step-item ${cls}">
-                                <div class="step-bubble">${icon}</div>
-                                <div class="step-label">${step}</div>
+                    return `
+                        <div style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 2px dashed #e0d0c0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 12px; margin-bottom: 15px; flex-wrap: wrap; gap: 8px;">
+                                <div>
+                                    <span style="font-size: 20px; font-weight: bold; color: var(--maroon);">${escapeHtml(match.service)}</span>
+                                    <span style="font-size: 13.5px; color: #666; margin-left: 8px;">(${escapeHtml(match.name || 'Client')})</span>
+                                </div>
+                                <div>${getStatusBadge(escapeHtml(match.status || 'Pending'))}</div>
                             </div>
-                        `;
-                    }).join('')}
-                </div>
 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; background: #faf8f5; padding: 15px; border-radius: 4px; font-size: 13px;">
-                    <div><strong>Target Deadline:</strong> ${escapeHtml(match.deadline || 'Flexible')}</div>
-                    <div><strong>Submitted Date:</strong> ${escapeHtml(match.submittedAt || 'Recent')}</div>
-                    <div><strong>Payment Method:</strong> <span style="text-transform: uppercase;">${escapeHtml(match.payment || 'N/A')}</span></div>
-                    <div>
-                        <strong>Amount Paid:</strong>
-                        <span style="color: #276749; font-weight: 700;">
-                            ${(paidAmount > 0) ? '&#8369;' + paidAmount.toLocaleString() : (isFullyPaid ? 'Fully Settled' : '&#8369;0')}
-                        </span>
-                        ${(!isNaN(agreedAmount) && agreedAmount > 0 && agreedAmount > paidAmount && !isFullyPaid) ? `
-                            <span style="font-size: 11.5px; color: #666;">(Agreed Fee: &#8369;${agreedAmount.toLocaleString()})</span>
-                        ` : (agreedAmount > 0 && isFullyPaid && paidAmount > 0) ? `
-                            <span style="font-size: 11.5px; color: #666;">(Total: &#8369;${agreedAmount.toLocaleString()})</span>
-                        ` : ''}
-                    </div>
-                    <div>
-                        <strong>Payment Status:</strong>
-                        <span style="font-weight: 600; color: ${isFullyPaid ? '#276749' : '#b45309'};">
-                            ${statusLabel}${(!isFullyPaid && !isNaN(balanceAmount) && balanceAmount > 0) ? ` (Balance: &#8369;${balanceAmount.toLocaleString()})` : ''}
-                        </span>
-                    </div>
-                </div>
+                            <!-- PROGRESS STEPPER -->
+                            <div class="progress-stepper">
+                                <div class="progress-bar-fill" style="width: ${fillPercent}%;"></div>
+                                ${statuses.map((step, idx) => {
+                                    let cls = '';
+                                    let icon = idx + 1;
+                                    if (idx < currentIndex) {
+                                        cls = 'completed';
+                                        icon = 'OK';
+                                    } else if (idx === currentIndex) {
+                                        cls = 'active';
+                                        icon = '●';
+                                    }
+                                    return `
+                                        <div class="step-item ${cls}">
+                                            <div class="step-bubble">${icon}</div>
+                                            <div class="step-label">${step}</div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
 
-                <div style="margin-top: 15px; font-size: 13px; color: #444;">
-                    <strong>Commission Scope:</strong>
-                    <p style="margin-top: 4px; color: #666;">${escapeHtml(match.description || 'Custom Commission')}</p>
-                </div>
-            `;
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; background: #faf8f5; padding: 15px; border-radius: 4px; font-size: 13px;">
+                                <div><strong>Target Deadline:</strong> ${escapeHtml(match.deadline || 'Flexible')}</div>
+                                <div><strong>Submitted Date:</strong> ${escapeHtml(match.submittedAt ? match.submittedAt.slice(0, 10) : 'Recent')}</div>
+                                <div><strong>Payment Method:</strong> <span style="text-transform: uppercase;">${escapeHtml(match.payment || 'N/A')}</span></div>
+                                <div>
+                                    <strong>Amount Paid:</strong>
+                                    <span style="color: #276749; font-weight: 700;">
+                                        ${(paidAmount > 0) ? '&#8369;' + paidAmount.toLocaleString() : (isFullyPaid ? 'Fully Settled' : '&#8369;0')}
+                                    </span>
+                                    ${(!isNaN(agreedAmount) && agreedAmount > 0 && agreedAmount > paidAmount && !isFullyPaid) ? `
+                                        <span style="font-size: 11.5px; color: #666;">(Agreed Fee: &#8369;${agreedAmount.toLocaleString()})</span>
+                                    ` : (agreedAmount > 0 && isFullyPaid && paidAmount > 0) ? `
+                                        <span style="font-size: 11.5px; color: #666;">(Total: &#8369;${agreedAmount.toLocaleString()})</span>
+                                    ` : ''}
+                                </div>
+                                <div>
+                                    <strong>Payment Status:</strong>
+                                    <span style="font-weight: 600; color: ${isFullyPaid ? '#276749' : '#b45309'};">
+                                        ${statusLabel}${(!isFullyPaid && !isNaN(balanceAmount) && balanceAmount > 0) ? ` (Balance: &#8369;${balanceAmount.toLocaleString()})` : ''}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 15px; font-size: 13px; color: #444;">
+                                <strong>Commission Scope:</strong>
+                                <p style="margin-top: 4px; color: #666;">${escapeHtml(match.description || 'Custom Commission')}</p>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
             } catch (error) {
-                resultBox.innerHTML = `<div style="text-align:center;padding:20px;color:#a94442;">${escapeHtml(error.message || 'Could not find that commission ID.')}</div>`;
+                resultBox.innerHTML = `<div style="text-align:center;padding:20px;color:#a94442;">${escapeHtml(error.message || 'No commissions found for that client name.')}</div>`;
             }
         }
 
@@ -594,6 +609,7 @@
                 let eventTags = dayEvents.map(e => {
                     let pillClass = 'pill-busy';
                     if (e.type === 'open') pillClass = 'pill-open';
+                    else if (e.type === 'deadline') pillClass = 'pill-deadline';
                     else if (e.type === 'general') pillClass = 'pill-general';
                     return `<span class="client-event-pill ${pillClass}">${escapeHtml(e.title)}</span>`;
                 }).join('');

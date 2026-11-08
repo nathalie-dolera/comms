@@ -109,3 +109,4 @@ Respond ONLY with a JSON object in this exact format, with no markdown code bloc
     return send(res, 500, { error: 'Could not analyze receipt.' });
   }
 };
+
