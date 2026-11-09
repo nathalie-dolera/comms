@@ -9,20 +9,27 @@ let tempCommissionReceipt = '';
 const passwordTimers = {};
 
 document.addEventListener('DOMContentLoaded', () => {
-    checkAuth();
-    initNavigation();
-    renderSubmissions();
-    renderPaymentsTracker();
-    renderFeedbacks();
-    renderOutputs();
-    renderCalendar();
-    renderAboutSections();
-    renderTermsSections();
-    renderServicesList();
-    renderClientAccounts();
-    renderCommissionerRegistrations();
-    loadPaymentQrCode();
-    updateBadges();
+    // Show a loading state rather than the login screen immediately,
+    // then check auth after the server session is restored
+    const authWrapper = document.getElementById('auth-wrapper');
+    if (authWrapper) authWrapper.classList.add('hidden'); // hide login during load
+
+    Storage.onReady(() => {
+        checkAuth();
+        initNavigation();
+        renderSubmissions();
+        renderPaymentsTracker();
+        renderFeedbacks();
+        renderOutputs();
+        renderCalendar();
+        renderAboutSections();
+        renderTermsSections();
+        renderServicesList();
+        renderClientAccounts();
+        renderCommissionerRegistrations();
+        loadPaymentQrCode();
+        updateBadges();
+    });
 });
 
 // ============================================
@@ -603,6 +610,15 @@ function viewSubmissionDetail(id) {
                 </div>
             </div>
         </div>
+
+        ${sub.agreedPrice ? `
+        <div class="admin-form-group">
+            <label style="color: var(--maroon); font-weight: bold;">Agreed Price</label>
+            <div class="modal-detail-box" style="font-size: 16px; font-weight: 700; color: var(--maroon-dark);">
+                ₱${Number(sub.agreedPrice).toLocaleString()}
+            </div>
+        </div>
+        ` : ''}
 
         ${sub.notes ? `
             <div class="admin-form-group">
@@ -1418,7 +1434,10 @@ function renderCalendar() {
             if (e.type === 'deadline') tagClass = 'tag-deadline';
             if (e.type === 'open') tagClass = 'tag-available';
             if (e.isCommission) {
-                return `<div class="calendar-event-tag ${tagClass}" style="cursor:default;" title="Accepted Commission Deadline">${escapeHtml(e.title)}</div>`;
+                // Find the commission for this deadline
+                const subs = Storage.get(Storage.KEYS.SUBMISSIONS, []);
+                const commId = e.id.replace('comm-dl-', '');
+                return `<div class="calendar-event-tag ${tagClass}" style="cursor:pointer;" title="Click to view commission details" onclick="event.stopPropagation(); viewCommissionCalEvent('${commId}')">${escapeHtml(e.title)}</div>`;
             }
             return `<div class="calendar-event-tag ${tagClass}" onclick="event.stopPropagation(); deleteEvent('${e.id}')" title="Click to delete">${escapeHtml(e.title)} ×</div>`;
         }).join('');
@@ -1438,6 +1457,16 @@ function openAddEventModal(dateStr = '') {
     document.getElementById('event-date').value = dateStr || new Date().toISOString().split('T')[0];
     document.getElementById('event-title').value = '';
     openModal('modal-add-event');
+}
+
+function viewCommissionCalEvent(commId) {
+    const list = Storage.get(Storage.KEYS.SUBMISSIONS, []);
+    const sub = list.find(s => s.id === commId);
+    if (sub) {
+        viewSubmissionDetail(sub.id);
+    } else {
+        showToast('Commission details not found.');
+    }
 }
 
 function handleSaveEvent(event) {
@@ -2259,21 +2288,35 @@ function renderPendingPaymentProofs() {
     if (!container) return;
     const proofs = Storage.get(Storage.KEYS.PAYMENT_PROOFS, []);
     if (!proofs.length) {
-        container.innerHTML = '<p style="margin:0;color:#8c5b52;font-style:italic;">No additional payment proofs submitted.</p>';
+        container.innerHTML = '<p style="margin:0;color:#8c5b52;font-style:italic;">No payment screenshots submitted yet.</p>';
         return;
     }
-    container.innerHTML = proofs.map(proof => `
-        <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-top:1px dashed #d4c4b0;flex-wrap:wrap;">
-            <img src="${proof.receipt}" alt="Payment proof from ${escapeHtml(proof.clientName)}" style="width:92px;height:72px;object-fit:cover;border-radius:4px;border:1px solid #d4c4b0;">
-            <div style="flex:1;min-width:170px;">
-                <strong>${escapeHtml(proof.clientName)}</strong>
-                <span class="status-pill status-${proof.paymentType === 'fully_paid' ? 'done' : 'progress'}" style="margin-left: 6px; font-size: 10px;">${proof.paymentType === 'fully_paid' ? 'Fully Paid' : '50% DP'}</span>
-                ${proof.amount ? `<span style="font-weight:700; color:var(--maroon); margin-left:6px;">₱${Number(proof.amount).toLocaleString()}</span>` : ''}
-                <div style="font-size:11px;color:#8c5b52;">Submitted ${new Date(proof.submittedAt).toLocaleString()} via ${escapeHtml(proof.mode || 'GCash')}</div>
+    container.innerHTML = proofs.map(proof => {
+        const isReceived = proof.status === 'received';
+        return `
+        <div style="border: 1px solid #d4c4b0; border-radius: 8px; padding: 14px; margin-bottom: 12px; background: ${isReceived ? '#f0faf0' : '#fffdf9'};">
+            <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;">
+                ${proof.receipt ? `<img src="${proof.receipt}" alt="Payment proof from ${escapeHtml(proof.clientName)}" style="width:100px;height:80px;object-fit:cover;border-radius:6px;border:1px solid #d4c4b0;cursor:pointer;" onclick="openViewReceiptModal('${proof.id}', true)">` : ''}
+                <div style="flex:1;min-width:170px;">
+                    <div style="font-weight:700;font-size:14px;color:var(--maroon-dark);font-family:'Playfair Display',serif;">${escapeHtml(proof.clientName)}</div>
+                    <div style="margin-top:4px;font-size:12px;color:#5a2e2e;">
+                        <span style="font-family:'Special Elite',monospace;">${escapeHtml(proof.mode || 'GCash')}</span>
+                        &bull;
+                        <span>${proof.paymentType === 'fully_paid' ? 'Full Payment' : 'Down Payment (50%)'}</span>
+                    </div>
+                    <div style="font-size:11px;color:#8c5b52;margin-top:2px;">Submitted: ${new Date(proof.submittedAt).toLocaleString()}</div>
+                    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+                        <button type="button" onclick="toggleProofReceived('${proof.id}', ${isReceived})"
+                            style="padding:5px 14px;border-radius:20px;font-family:'Special Elite',monospace;font-size:12px;font-weight:700;cursor:pointer;border:2px solid ${isReceived ? '#1e8449' : '#ccc'};background:${isReceived ? '#eafaf1' : '#fff'};color:${isReceived ? '#1e8449' : '#777'};">
+                            ${isReceived ? 'Received' : 'Not Received'}
+                        </button>
+                        <button type="button" onclick="recordPaymentFromProof('${proof.id}')" class="btn-action btn-primary" style="font-size:12px;padding:5px 12px;">Log to Sheet</button>
+                        <button type="button" onclick="dismissPaymentProof('${proof.id}')" class="btn-action btn-danger" style="font-size:12px;padding:5px 12px;">Dismiss</button>
+                    </div>
+                </div>
             </div>
-            <button type="button" class="btn-action btn-primary" onclick="recordPaymentFromProof('${proof.id}')">Record Payment</button>
-            <button type="button" class="btn-action btn-danger" onclick="dismissPaymentProof('${proof.id}')">Dismiss</button>
-        </div>`).join('');
+        </div>`;
+    }).join('');
 }
 
 function recordPaymentFromProof(proofId) {
@@ -2293,6 +2336,17 @@ function dismissPaymentProof(proofId) {
     const proofs = Storage.get(Storage.KEYS.PAYMENT_PROOFS, []).filter(item => item.id !== proofId);
     Storage.set(Storage.KEYS.PAYMENT_PROOFS, proofs);
     renderPendingPaymentProofs();
+}
+
+function toggleProofReceived(proofId, isCurrentlyReceived) {
+    const proofs = Storage.get(Storage.KEYS.PAYMENT_PROOFS, []);
+    const idx = proofs.findIndex(p => p.id === proofId);
+    if (idx !== -1) {
+        proofs[idx].status = isCurrentlyReceived ? 'pending' : 'received';
+        Storage.set(Storage.KEYS.PAYMENT_PROOFS, proofs);
+        renderPendingPaymentProofs();
+        showToast(isCurrentlyReceived ? 'Marked as Not Received.' : 'Marked as Received!');
+    }
 }
 
 function renderPaymentStats(payments) {
@@ -3002,24 +3056,23 @@ function deletePayment(id) {
     renderPaymentsTracker();
 }
 
-function openViewReceiptModal(id) {
-    const list = Storage.get(Storage.KEYS.PAYMENTS, []);
-    const item = list.find(p => p.id === id);
-    if (!item || !item.receipt) {
-        showToast('No receipt image found for this payment.');
-        return;
+function openViewReceiptModal(id, isProof = false) {
+    let receipt, details;
+    if (isProof) {
+        const proof = Storage.get(Storage.KEYS.PAYMENT_PROOFS, []).find(p => p.id === id);
+        if (!proof || !proof.receipt) { showToast('No receipt image found.'); return; }
+        receipt = proof.receipt;
+        details = `${proof.clientName} • ${proof.mode || 'GCash'} • ${proof.paymentType === 'fully_paid' ? 'Full Payment' : 'Down Payment'}`;
+    } else {
+        const item = Storage.get(Storage.KEYS.PAYMENTS, []).find(p => p.id === id);
+        if (!item || !item.receipt) { showToast('No receipt image found for this payment.'); return; }
+        receipt = item.receipt;
+        details = `${item.clientName} • ${formatPHP(item.amount)} via ${item.mode} (${item.date || ''})`;
     }
-
     const detailsEl = document.getElementById('view-receipt-details');
     const imgEl = document.getElementById('view-receipt-img');
-
-    if (detailsEl) {
-        detailsEl.textContent = `${item.clientName} • ${formatPHP(item.amount)} via ${item.mode} (${item.date || ''})`;
-    }
-    if (imgEl) {
-        imgEl.src = item.receipt;
-    }
-
+    if (detailsEl) detailsEl.textContent = details;
+    if (imgEl) imgEl.src = receipt;
     openModal('modal-view-receipt');
 }
 

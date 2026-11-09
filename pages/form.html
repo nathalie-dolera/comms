@@ -81,7 +81,7 @@
                             <button type="button" onclick="clearCommissionSearch()" id="clear-search-btn" style="display:none; font-size:11px; color:#b02a37; background:none; border:none; text-decoration:underline; cursor:pointer; font-weight:600;">Reset / Create New</button>
                         </div>
                         <div style="display: flex; gap: 8px;">
-                            <input type="text" id="comm-search-input" placeholder="Type your client name or COM-ID..." style="flex: 1; padding: 9px 12px; font-size: 13px; border: 1px solid #d4c4b0; border-radius: 4px; background:#fff;">
+                            <input type="text" id="comm-search-input" placeholder="Type your client name..." style="flex: 1; padding: 9px 12px; font-size: 13px; border: 1px solid #d4c4b0; border-radius: 4px; background:#fff;">
                             <button type="button" class="btn-action btn-primary" onclick="searchExistingCommission()" style="padding: 9px 16px; font-size: 12px; white-space:nowrap;">Search &amp; Load</button>
                         </div>
                         <div id="comm-search-status" style="display:none; margin-top: 10px; font-size: 12px; padding: 10px 12px; border-radius: 4px; font-family:'Special Elite', monospace;"></div>
@@ -198,21 +198,20 @@
                     <!-- Payment Details (Only active when accepted) -->
                     <div id="payment-inputs-container" style="opacity: 0.5; pointer-events: none; transition: opacity 0.3s ease;">
                         
-                        <!-- Payment Option: Default is Downpayment, with Fully Paid option -->
-                        <div class="form-group" style="margin-bottom: 18px;">
+                    <div class="form-group" style="margin-bottom: 18px;">
                             <label style="font-weight: 700; margin-bottom: 8px; display: block; font-family:'Special Elite', monospace; font-size:12.5px; text-transform:uppercase; color:var(--maroon-dark);">
                                 Payment Option:
                             </label>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                                 <label id="payment-stage-dp-lbl" style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 2px solid var(--maroon); border-radius: 6px; background: #fff8f5; cursor: pointer; transition: all 0.2s;">
-                                    <input type="radio" name="payment-option-type" id="pay-opt-dp" value="downpayment" checked onchange="handlePaymentOptionChange('downpayment')">
+                                    <input type="radio" name="payment-option-type" id="pay-opt-dp" value="downpayment" checked onchange="handlePaymentOptionChange('downpayment')" style="display:none;">
                                     <div>
                                         <strong style="display: block; font-family: 'Special Elite', monospace; color: var(--maroon-dark); font-size: 13px;">Down Payment (50%)</strong>
                                         <span id="dp-subtitle-hint" style="font-size: 11px; color: #7a5048;">50% initial deposit</span>
                                     </div>
                                 </label>
                                 <label id="payment-stage-full-lbl" style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px dashed #d4c4b0; border-radius: 6px; background: #ffffff; cursor: pointer; transition: all 0.2s;">
-                                    <input type="radio" name="payment-option-type" id="pay-opt-full" value="fully_paid" onchange="handlePaymentOptionChange('fully_paid')">
+                                    <input type="radio" name="payment-option-type" id="pay-opt-full" value="fully_paid" onchange="handlePaymentOptionChange('fully_paid')" style="display:none;">
                                     <div>
                                         <strong style="display: block; font-family: 'Special Elite', monospace; color: var(--maroon-dark); font-size: 13px;">Full Paid</strong>
                                         <span id="full-subtitle-hint" style="font-size: 11px; color: #7a5048;">100% full payment</span>
@@ -221,37 +220,23 @@
                             </div>
                         </div>
 
-                        <!-- Amount Paid -->
-                        <div class="form-group">
-                            <label for="payment-amount" id="payment-amount-label">Amount Paid in Screenshot (₱)</label>
-                            <input type="number" id="payment-amount" name="payment-amount" min="0" step="any" placeholder="e.g. 500" required>
-                        </div>
-
                         <!-- Hidden mode of payment synced from top selector -->
                         <input type="hidden" id="payment-mode-select" name="payment-mode-select" value="GCash">
                         <input type="text" id="payment-proof-other-input" placeholder="Type payment method (e.g. BDO, BPI)" style="display:none; margin-bottom:12px;">
 
-                        <!-- Upload Screenshot & AI Receipt Scanner -->
-                        <div class="gcash-payment-card" style="background: #ffffff; border: 2px dashed #007dfe; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
+                        <!-- Upload Screenshot Proof -->
+                        <div class="gcash-payment-card" style="background: #ffffff; border: 2px dashed var(--rose); border-radius: 6px; padding: 16px; margin-bottom: 20px;">
                             <div class="form-group" style="margin-bottom: 0;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                    <label for="payment-receipt-file" style="color: #0056b3; font-weight: 700; font-family: 'Special Elite', monospace; font-size: 13px; margin: 0;">
-                                        Upload Payment Screenshot Proof
-                                    </label>
-                                    <span style="font-size: 11px; background: #e8f4fd; color: #0056b3; padding: 2px 8px; border-radius: 10px; font-weight: 600; font-family:'Special Elite', monospace;">
-                                        AI / Gemini Scanner Active
-                                    </span>
-                                </div>
+                                <label for="payment-receipt-file" style="color: var(--maroon-dark); font-weight: 700; font-family: 'Special Elite', monospace; font-size: 13px; margin: 0 0 8px; display:block;">
+                                    Upload Payment Proof Document / Screenshot
+                                </label>
                                 
-                                <input type="file" id="payment-receipt-file" accept="image/*" onchange="handlePaymentScreenshotUpload(event)" required style="background: white; border-color: #90caf9;">
+                                <input type="file" id="payment-receipt-file" accept="image/*" onchange="handlePaymentScreenshotUpload(event)" required style="background: white; border-color: #cbb8a8;">
                                 
-                                <!-- AI Scanner Status Banner -->
-                                <div id="ai-scanner-status" style="display: none; margin-top: 10px; padding: 10px 14px; border-radius: 4px; font-size: 12px; font-family:'Special Elite', monospace;"></div>
-
                                 <!-- Receipt Preview Box -->
-                                <div id="payment-proof-preview-wrap" style="display: none; margin-top: 10px; text-align: center; background: #f0f7ff; padding: 10px; border-radius: 4px; border: 1px solid #bce0fd;">
+                                <div id="payment-proof-preview-wrap" style="display: none; margin-top: 10px; text-align: center; background: #fff8f5; padding: 10px; border-radius: 4px; border: 1px solid #ebdcd0;">
                                     <img id="payment-proof-preview-img" src="" alt="Payment Proof" style="max-height: 180px; max-width: 100%; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                                    <div style="font-size: 11px; color: #28a745; margin-top: 4px; font-weight: 600; font-family:'Special Elite', monospace;">Screenshot Attached</div>
+                                    <div style="font-size: 11px; color: #2e7d32; margin-top: 4px; font-weight: 600; font-family:'Special Elite', monospace;">Screenshot Attached</div>
                                 </div>
                             </div>
                         </div>
@@ -674,105 +659,60 @@
         }
 
         // ============================================
-        // 5. AI / GEMINI RECEIPT SCANNER & CROSSCHECK
+        // 5. PAYMENT PROOF UPLOAD & SUBMISSION
         // ============================================
-        function handlePaymentScreenshotUpload(event) {
+        function compressReceiptImage(file, maxWidth = 1200, quality = 0.82) {
+            return new Promise((resolve, reject) => {
+                if (!file || !file.type.startsWith('image/')) {
+                    return reject(new Error('File is not an image'));
+                }
+                const reader = new FileReader();
+                reader.onerror = reject;
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onerror = () => resolve(e.target.result);
+                    img.onload = function() {
+                        try {
+                            let w = img.width;
+                            let h = img.height;
+                            if (w > maxWidth || h > maxWidth) {
+                                if (w > h) {
+                                    h = Math.round((h * maxWidth) / w);
+                                    w = maxWidth;
+                                } else {
+                                    w = Math.round((w * maxWidth) / h);
+                                    h = maxWidth;
+                                }
+                            }
+                            const canvas = document.createElement('canvas');
+                            canvas.width = w;
+                            canvas.height = h;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, w, h);
+                            const format = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+                            resolve(canvas.toDataURL(format, quality));
+                        } catch (err) {
+                            resolve(e.target.result);
+                        }
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function handlePaymentScreenshotUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
 
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                tempPaymentProofBase64 = e.target.result;
+            try {
+                tempPaymentProofBase64 = await compressReceiptImage(file, 1200, 0.82);
                 const wrap = document.getElementById('payment-proof-preview-wrap');
                 const img = document.getElementById('payment-proof-preview-img');
                 if (img) img.src = tempPaymentProofBase64;
                 if (wrap) wrap.style.display = 'block';
-
-                // Trigger AI / Gemini Verification
-                await runAiReceiptVerification(tempPaymentProofBase64);
-            };
-            reader.readAsDataURL(file);
-        }
-
-        async function runAiReceiptVerification(base64Data) {
-            const statusEl = document.getElementById('ai-scanner-status');
-            const agreed = currentApprovedCommission ? Number(currentApprovedCommission.agreedPrice) || 0 : 0;
-            const currentStage = document.querySelector('input[name="payment-option-type"]:checked')?.value || 'downpayment';
-
-            if (statusEl) {
-                statusEl.style.display = 'block';
-                statusEl.style.background = '#e0f2fe';
-                statusEl.style.color = '#0369a1';
-                statusEl.style.border = '1px solid #bae6fd';
-                statusEl.innerHTML = '<strong>AI / Gemini Scanner:</strong> Analyzing receipt screenshot, extracting amount &amp; payment channel...';
-            }
-
-            try {
-                const res = await Storage.verifyReceipt(base64Data, {
-                    agreedPrice: agreed,
-                    paymentTypeHint: currentStage
-                });
-
-                if (res && res.ok) {
-                    const detectedAmount = Number(res.amount) || 0;
-                    const detectedMode = res.mode || 'GCash';
-                    const refNumber = res.refNumber || '';
-
-                    // Auto-fill payment mode if detected
-                    const modeSelect = document.getElementById('payment-mode-select');
-                    if (modeSelect) {
-                        const optExists = Array.from(modeSelect.options).some(o => o.value.toLowerCase() === detectedMode.toLowerCase());
-                        if (optExists) {
-                            modeSelect.value = detectedMode;
-                        } else {
-                            modeSelect.value = 'Other';
-                            const otherInput = document.getElementById('payment-proof-other-input');
-                            if (otherInput) {
-                                otherInput.value = detectedMode;
-                                otherInput.style.display = 'block';
-                            }
-                        }
-                    }
-
-                    // Auto-fill amount if detected
-                    if (detectedAmount > 0) {
-                        const amtInput = document.getElementById('payment-amount');
-                        if (amtInput) amtInput.value = detectedAmount;
-                    }
-
-                    // Crosscheck against agreed project price
-                    let crosscheckMsg = '';
-                    if (agreed > 0 && detectedAmount > 0) {
-                        if (detectedAmount >= agreed) {
-                            document.getElementById('pay-opt-full').checked = true;
-                            handlePaymentOptionChange('fully_paid');
-                            crosscheckMsg = `Amount <strong>₱${detectedAmount.toLocaleString()}</strong> completely settles the agreed fee of <strong>₱${agreed.toLocaleString()}</strong> (100% Fully Paid).`;
-                        } else {
-                            document.getElementById('pay-opt-dp').checked = true;
-                            handlePaymentOptionChange('downpayment');
-                            crosscheckMsg = `Amount <strong>₱${detectedAmount.toLocaleString()}</strong> satisfies the 50% deposit requirement on agreed fee of <strong>₱${agreed.toLocaleString()}</strong> (50% Downpayment).`;
-                        }
-                    } else {
-                        crosscheckMsg = `Detected <strong>₱${detectedAmount.toLocaleString()}</strong> via <strong>${escapeHtml(detectedMode)}</strong>.`;
-                    }
-
-                    if (statusEl) {
-                        statusEl.style.background = '#ecfdf5';
-                        statusEl.style.color = '#065f46';
-                        statusEl.style.border = '1px solid #a7f3d0';
-                        statusEl.innerHTML = `
-                            <div style="font-weight: bold; margin-bottom: 2px;">AI Verified (${res.source === 'gemini' ? 'Gemini 1.5 Vision' : 'Smart OCR'}):</div>
-                            <div>${crosscheckMsg} ${refNumber ? `&bull; Ref: <strong>${escapeHtml(refNumber)}</strong>` : ''}</div>
-                        `;
-                    }
-                }
             } catch (err) {
-                if (statusEl) {
-                    statusEl.style.background = '#fef3c7';
-                    statusEl.style.color = '#92400e';
-                    statusEl.style.border = '1px solid #fde68a';
-                    statusEl.innerHTML = `ℹ️ Receipt attached. Could not auto-detect fields (${escapeHtml(err.message)}). Please verify amount and mode manually below.`;
-                }
+                alert('Could not process the uploaded image. Please try another image.');
             }
         }
 
@@ -782,7 +722,6 @@
         async function submitPaymentProofForm(event) {
             event.preventDefault();
             const client = document.getElementById('payment-client-name')?.value.trim();
-            const amount = parseFloat(document.getElementById('payment-amount')?.value) || 0;
             const stage = document.querySelector('input[name="payment-option-type"]:checked')?.value || 'downpayment';
             
             let mode = document.getElementById('payment-mode-select')?.value || 'GCash';
@@ -796,15 +735,21 @@
                 return;
             }
             if (!tempPaymentProofBase64) {
-                alert('Please upload your payment screenshot.');
+                alert('Please upload your payment screenshot proof.');
                 return;
+            }
+
+            const submitBtn = document.getElementById('payment-submit-btn');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Submitting Payment...';
             }
 
             try {
                 await Storage.submitPaymentProof({
                     clientName: client,
                     receipt: tempPaymentProofBase64,
-                    amount: amount,
+                    amount: 0,
                     paymentType: stage,
                     mode: mode,
                     commId: currentApprovedCommission ? currentApprovedCommission.id : ''
@@ -815,16 +760,19 @@
                 resetPaymentClientState();
                 const wrap = document.getElementById('payment-proof-preview-wrap');
                 if (wrap) wrap.style.display = 'none';
-                const aiStatus = document.getElementById('ai-scanner-status');
-                if (aiStatus) aiStatus.style.display = 'none';
 
                 const msg = document.getElementById('payment-proof-success-msg');
                 if (msg) {
-                    msg.innerHTML = `<strong>Payment Submitted!</strong> Thank you, <strong>${escapeHtml(client)}</strong>. Your ${stage === 'fully_paid' ? 'full payment' : 'downpayment'} screenshot of ₱${amount.toLocaleString()} via ${mode} has been received for review.`;
+                    msg.innerHTML = `Payment submitted! Thank you, <strong>${escapeHtml(client)}</strong>. Your payment screenshot via <strong>${escapeHtml(mode)}</strong> has been received for review.`;
                     msg.style.display = 'block';
                 }
             } catch (error) {
                 alert(error.message || 'Could not submit payment proof. Please try again.');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Submit Payment';
+                }
             }
         }
 
