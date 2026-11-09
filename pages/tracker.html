@@ -484,8 +484,17 @@
                     const paidAmount = Number(match.amountPaid) || 0;
                     const agreedAmount = Number(match.agreedPrice) || 0;
                     const balanceAmount = Math.max(0, Number(match.balance) || agreedAmount - paidAmount);
-                    const isFullyPaid = (match.paymentType === 'fully_paid') || (balanceAmount === 0 && paidAmount > 0);
-                    const statusLabel = isFullyPaid ? 'Fully Paid' : '50% DP';
+                    
+                    let paymentStatusLabel = 'N/A';
+                    let paymentStatusColor = '#666';
+                    if (paidAmount > 0 || match.paymentType) {
+                        const isFullyPaid = (match.paymentType === 'fully_paid') || (balanceAmount === 0 && paidAmount > 0);
+                        paymentStatusLabel = isFullyPaid ? 'Fully Paid' : '50% DP';
+                        if (!isFullyPaid && balanceAmount > 0) {
+                            paymentStatusLabel += ` (Balance: ₱${balanceAmount.toLocaleString()})`;
+                        }
+                        paymentStatusColor = isFullyPaid ? '#276749' : '#b45309';
+                    }
 
                     return `
                         <div style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 2px dashed #e0d0c0;">
@@ -525,19 +534,19 @@
                                 <div><strong>Payment Method:</strong> <span style="text-transform: uppercase;">${escapeHtml(match.payment || 'N/A')}</span></div>
                                 <div>
                                     <strong>Amount Paid:</strong>
-                                    <span style="color: #276749; font-weight: 700;">
-                                        ${(paidAmount > 0) ? '&#8369;' + paidAmount.toLocaleString() : (isFullyPaid ? 'Fully Settled' : '&#8369;0')}
+                                    <span style="color: ${paidAmount > 0 ? '#276749' : '#666'}; font-weight: 700;">
+                                        ${paidAmount > 0 ? '₱' + paidAmount.toLocaleString() : 'N/A'}
                                     </span>
-                                    ${(!isNaN(agreedAmount) && agreedAmount > 0 && agreedAmount > paidAmount && !isFullyPaid) ? `
-                                        <span style="font-size: 11.5px; color: #666;">(Agreed Fee: &#8369;${agreedAmount.toLocaleString()})</span>
-                                    ` : (agreedAmount > 0 && isFullyPaid && paidAmount > 0) ? `
-                                        <span style="font-size: 11.5px; color: #666;">(Total: &#8369;${agreedAmount.toLocaleString()})</span>
+                                    ${(!isNaN(agreedAmount) && agreedAmount > 0 && agreedAmount > paidAmount && paidAmount > 0) ? `
+                                        <span style="font-size: 11.5px; color: #666;">(Agreed Fee: ₱${agreedAmount.toLocaleString()})</span>
+                                    ` : (agreedAmount > 0 && paidAmount >= agreedAmount && paidAmount > 0) ? `
+                                        <span style="font-size: 11.5px; color: #666;">(Total: ₱${agreedAmount.toLocaleString()})</span>
                                     ` : ''}
                                 </div>
                                 <div>
                                     <strong>Payment Status:</strong>
-                                    <span style="font-weight: 600; color: ${isFullyPaid ? '#276749' : '#b45309'};">
-                                        ${statusLabel}${(!isFullyPaid && !isNaN(balanceAmount) && balanceAmount > 0) ? ` (Balance: &#8369;${balanceAmount.toLocaleString()})` : ''}
+                                    <span style="font-weight: 600; color: ${paymentStatusColor};">
+                                        ${paymentStatusLabel}
                                     </span>
                                 </div>
                             </div>

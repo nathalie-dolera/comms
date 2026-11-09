@@ -2326,10 +2326,38 @@ function recordPaymentFromProof(proofId) {
     const client = document.getElementById('pay-client-name');
     const preview = document.getElementById('pay-receipt-preview-img');
     const wrap = document.getElementById('pay-receipt-preview-wrap');
+    const modeSelect = document.getElementById('pay-mode');
+    const optionSelect = document.getElementById('pay-option');
+    const serviceSelect = document.getElementById('pay-service');
+    const agreedInput = document.getElementById('pay-agreed-price');
+
     if (client) client.value = proof.clientName;
     if (preview) preview.src = proof.receipt;
     if (wrap) wrap.style.display = 'block';
     tempPaymentReceipt = proof.receipt;
+
+    if (modeSelect && proof.mode) modeSelect.value = proof.mode;
+    if (optionSelect && proof.paymentType) optionSelect.value = proof.paymentType;
+
+    // Auto-fetch type of service and agreed fee from client's commission
+    const subs = Storage.get(Storage.KEYS.SUBMISSIONS, []);
+    const match = (proof.commId && subs.find(s => s.id === proof.commId)) ||
+                  subs.find(s => s.name && s.name.trim().toLowerCase() === proof.clientName.trim().toLowerCase());
+    if (match) {
+        if (serviceSelect && match.service) {
+            let optExists = Array.from(serviceSelect.options).some(o => o.value === match.service);
+            if (!optExists) {
+                const newOpt = document.createElement('option');
+                newOpt.value = match.service;
+                newOpt.textContent = match.service;
+                serviceSelect.appendChild(newOpt);
+            }
+            serviceSelect.value = match.service;
+        }
+        if (agreedInput && match.agreedPrice && !agreedInput.value) {
+            agreedInput.value = match.agreedPrice;
+        }
+    }
 }
 
 function dismissPaymentProof(proofId) {
@@ -3035,6 +3063,21 @@ function handleSavePayment(event) {
     }
 
     Storage.set(Storage.KEYS.PAYMENTS, list);
+
+    // Sync payment details back to the client's commission
+    const subs = Storage.get(Storage.KEYS.SUBMISSIONS, []);
+    const subIdx = subs.findIndex(s => s.name && s.name.trim().toLowerCase() === clientName.toLowerCase());
+    if (subIdx !== -1) {
+        subs[subIdx].payment = mode;
+        subs[subIdx].paymentType = paymentType;
+        subs[subIdx].amountPaid = amount;
+        if (agreedPrice > 0) subs[subIdx].agreedPrice = agreedPrice;
+        subs[subIdx].balance = bal;
+        if (tempPaymentReceipt) subs[subIdx].downpaymentReceipt = tempPaymentReceipt;
+        Storage.set(Storage.KEYS.SUBMISSIONS, subs);
+        renderSubmissions();
+    }
+
     if (proofSubmissionId) {
         const remainingProofs = Storage.get(Storage.KEYS.PAYMENT_PROOFS, []).filter(item => item.id !== proofSubmissionId);
         Storage.set(Storage.KEYS.PAYMENT_PROOFS, remainingProofs);
