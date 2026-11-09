@@ -76,7 +76,7 @@
                     <div style="background: #fff8f5; border: 1px dashed var(--rose); padding: 14px 16px; border-radius: 6px; margin-bottom: 20px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <span style="font-family:'Special Elite', monospace; font-size:12px; color:var(--maroon-dark); text-transform:uppercase; letter-spacing:0.5px; font-weight:bold;">
-                                🔍 Search Existing or Admin-Submitted Commission
+                                Search Existing or Admin-Submitted Commission
                             </span>
                             <button type="button" onclick="clearCommissionSearch()" id="clear-search-btn" style="display:none; font-size:11px; color:#b02a37; background:none; border:none; text-decoration:underline; cursor:pointer; font-weight:600;">Reset / Create New</button>
                         </div>
@@ -95,23 +95,19 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="email">Where to Turnover the Output</label>
-                        <input type="text" id="email" name="email" placeholder="e.g. Gmail: your@email.com, Telegram: @handle, Google Drive, etc." required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Contact Channel</label>
-                        <div style="display: grid; grid-template-columns: 140px 1fr; gap: 10px;">
-                            <select id="contact-channel" name="contact-channel">
-                                <option value="Facebook">Facebook</option>
+                        <label>Where to Turnover the Output</label>
+                        <div style="display: grid; grid-template-columns: 160px 1fr; gap: 10px;">
+                            <select id="email" name="email">
+                                <option value="Gmail">Gmail</option>
                                 <option value="Telegram">Telegram</option>
-                                <option value="Email">Email</option>
+                                <option value="Google Drive">Google Drive</option>
+                                <option value="Facebook">Facebook</option>
                                 <option value="Instagram">Instagram</option>
                                 <option value="Discord">Discord</option>
                                 <option value="Twitter/X">Twitter / X</option>
                                 <option value="Other">Other</option>
                             </select>
-                            <input type="text" id="contact-account" name="contact-account" placeholder="Account name or username" required>
+                            <input type="text" id="turnover-account" name="turnover-account" placeholder="Account name, email, or link" required>
                         </div>
                     </div>
 
@@ -145,6 +141,11 @@
                         <input type="date" id="deadline" name="deadline">
                     </div>
 
+                    <div class="form-group">
+                        <label for="agreed-price">Agreed Price (₱)</label>
+                        <input type="number" id="agreed-price" name="agreed-price" min="0" step="any" placeholder="e.g. 1000 (leave blank if not yet agreed)">
+                    </div>
+
                     <button type="submit" id="comm-submit-btn" class="submit-btn" style="margin-top: 20px;">Request a Commission</button>
                 </form>
 
@@ -167,10 +168,24 @@
                         <div id="payment-client-status-box" style="display: none; margin-top: 10px; padding: 12px 14px; border-radius: 6px; font-size: 12.5px; font-family:'Special Elite', monospace;"></div>
                     </div>
 
+                    <!-- Mode of Payment (shown here so QR updates before full details unlock) -->
+                    <div class="form-group" id="payment-mode-early-wrap" style="display:none;">
+                        <label for="payment-mode-select-top">Mode of Payment</label>
+                        <select id="payment-mode-select-top" name="payment-mode-select-top" onchange="syncPaymentMode(this.value)">
+                            <option value="GCash">GCash</option>
+                            <option value="Maya">Maya</option>
+                            <option value="PayPal">PayPal</option>
+                            <option value="Maribank">Maribank</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Other">Other (specify)</option>
+                        </select>
+                        <input type="text" id="payment-mode-other-top" placeholder="Type payment method (e.g. BDO, BPI)" style="display:none; margin-top:8px;">
+                    </div>
+
                     <!-- Admin Payment QR Code Section (Only appears when accepted) -->
                     <div id="admin-payment-qr-wrap" style="display: none; background: #ffffff; border: 2px solid var(--maroon); border-radius: 6px; padding: 18px; margin: 18px 0; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.06);">
                         <div id="admin-payment-qr-title" style="font-family:'Special Elite', monospace; font-size: 14.5px; color: var(--maroon-dark); font-weight: bold; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px;">
-                            📱 Scan Admin QR Code to Pay
+                            Scan QR Code to Pay
                         </div>
                         <p style="font-size: 12px; color: #7a5048; margin: 0 0 14px;">
                             Scan this QR code using your payment app. After payment, upload your receipt screenshot below!
@@ -192,39 +207,29 @@
                                 <label id="payment-stage-dp-lbl" style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 2px solid var(--maroon); border-radius: 6px; background: #fff8f5; cursor: pointer; transition: all 0.2s;">
                                     <input type="radio" name="payment-option-type" id="pay-opt-dp" value="downpayment" checked onchange="handlePaymentOptionChange('downpayment')">
                                     <div>
-                                        <strong style="display: block; font-family: 'Special Elite', monospace; color: var(--maroon-dark); font-size: 13px;">Downpayment</strong>
-                                        <span id="dp-subtitle-hint" style="font-size: 11px; color: #7a5048;">50% Initial deposit to start work</span>
+                                        <strong style="display: block; font-family: 'Special Elite', monospace; color: var(--maroon-dark); font-size: 13px;">Down Payment (50%)</strong>
+                                        <span id="dp-subtitle-hint" style="font-size: 11px; color: #7a5048;">50% initial deposit</span>
                                     </div>
                                 </label>
                                 <label id="payment-stage-full-lbl" style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px dashed #d4c4b0; border-radius: 6px; background: #ffffff; cursor: pointer; transition: all 0.2s;">
                                     <input type="radio" name="payment-option-type" id="pay-opt-full" value="fully_paid" onchange="handlePaymentOptionChange('fully_paid')">
                                     <div>
-                                        <strong style="display: block; font-family: 'Special Elite', monospace; color: var(--maroon-dark); font-size: 13px;">Fully Paid</strong>
-                                        <span id="full-subtitle-hint" style="font-size: 11px; color: #7a5048;">100% Full project payment</span>
+                                        <strong style="display: block; font-family: 'Special Elite', monospace; color: var(--maroon-dark); font-size: 13px;">Full Paid</strong>
+                                        <span id="full-subtitle-hint" style="font-size: 11px; color: #7a5048;">100% full payment</span>
                                     </div>
                                 </label>
                             </div>
                         </div>
 
-                        <!-- Amount Paid & Mode of Payment -->
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                            <div class="form-group">
-                                <label for="payment-amount" id="payment-amount-label">Amount Paid in Screenshot (₱)</label>
-                                <input type="number" id="payment-amount" name="payment-amount" min="0" step="any" placeholder="e.g. 500" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="payment-mode-select">Mode of Payment</label>
-                                <select id="payment-mode-select" name="payment-mode-select" onchange="handlePaymentModeChange(this.value)">
-                                    <option value="GCash" selected>GCash</option>
-                                    <option value="Maya">Maya</option>
-                                    <option value="PayPal">PayPal</option>
-                                    <option value="Maribank">Maribank</option>
-                                    <option value="Bank Transfer">Bank Transfer</option>
-                                    <option value="Other">Other (specify)</option>
-                                </select>
-                                <input type="text" id="payment-proof-other-input" placeholder="Type payment method (e.g. BDO, BPI)" style="display:none; margin-top:8px;">
-                            </div>
+                        <!-- Amount Paid -->
+                        <div class="form-group">
+                            <label for="payment-amount" id="payment-amount-label">Amount Paid in Screenshot (₱)</label>
+                            <input type="number" id="payment-amount" name="payment-amount" min="0" step="any" placeholder="e.g. 500" required>
                         </div>
+
+                        <!-- Hidden mode of payment synced from top selector -->
+                        <input type="hidden" id="payment-mode-select" name="payment-mode-select" value="GCash">
+                        <input type="text" id="payment-proof-other-input" placeholder="Type payment method (e.g. BDO, BPI)" style="display:none; margin-bottom:12px;">
 
                         <!-- Upload Screenshot & AI Receipt Scanner -->
                         <div class="gcash-payment-card" style="background: #ffffff; border: 2px dashed #007dfe; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
@@ -384,35 +389,38 @@
                 // Pick best match (exact or first match)
                 const comm = results[0];
                 document.getElementById('name').value = comm.name || '';
-                document.getElementById('email').value = comm.email || '';
                 
-                // Contact channel
-                if (comm.contact && comm.contact.includes(':')) {
-                    const parts = comm.contact.split(':');
-                    const ch = parts[0].trim();
-                    const acc = parts.slice(1).join(':').trim();
-                    const chSelect = document.getElementById('contact-channel');
-                    if (chSelect) chSelect.value = ch;
-                    document.getElementById('contact-account').value = acc;
-                } else if (comm.contact) {
-                    document.getElementById('contact-account').value = comm.contact;
+                // Populate turnover dropdown + account
+                if (comm.email && comm.email.includes(':')) {
+                    const parts = comm.email.split(':');
+                    const platform = parts[0].trim();
+                    const account = parts.slice(1).join(':').trim();
+                    const emailSel = document.getElementById('email');
+                    if (emailSel) emailSel.value = platform;
+                    const turnoverAccEl = document.getElementById('turnover-account');
+                    if (turnoverAccEl) turnoverAccEl.value = account;
+                } else if (comm.email) {
+                    const turnoverAccEl = document.getElementById('turnover-account');
+                    if (turnoverAccEl) turnoverAccEl.value = comm.email;
                 }
-
+                
                 const svcSelect = document.getElementById('service');
                 if (svcSelect) svcSelect.value = comm.service || '';
                 document.getElementById('description').value = comm.description || '';
                 document.getElementById('deadline').value = comm.deadline || '';
                 document.getElementById('editing-comm-id').value = comm.id || '';
+                const agreedEl = document.getElementById('agreed-price');
+                if (agreedEl && comm.agreedPrice) agreedEl.value = comm.agreedPrice;
 
                 const submitBtn = document.getElementById('comm-submit-btn');
-                if (submitBtn) submitBtn.textContent = `Update Commission Details (${comm.id})`;
+                if (submitBtn) submitBtn.textContent = `Update Commission Details`;
 
                 if (clearBtn) clearBtn.style.display = 'inline-block';
 
                 if (statusEl) {
                     statusEl.style.background = '#e8f5e9';
                     statusEl.style.color = '#2e7d32';
-                    statusEl.innerHTML = `✅ Found commission <strong>${escapeHtml(comm.id)}</strong> for <strong>${escapeHtml(comm.name)}</strong> (Status: <strong>${escapeHtml(comm.status)}</strong>). Details loaded! You can modify fields and save.`;
+                    statusEl.innerHTML = `Found commission for <strong>${escapeHtml(comm.name)}</strong> (Status: <strong>${escapeHtml(comm.status)}</strong>). Details loaded! You can modify fields and save.`;
                 }
             } catch (err) {
                 if (statusEl) {
@@ -476,7 +484,7 @@
                         box.style.display = 'block';
                         box.style.background = '#fff3cd';
                         box.style.color = '#856404';
-                        box.innerHTML = `⚠️ No commission found under <strong>"${escapeHtml(clientName)}"</strong>. Please make sure you requested a commission first.`;
+                        box.innerHTML = `No commission found under <strong>"${escapeHtml(clientName)}"</strong>. Please make sure you requested a commission first.`;
                     }
                     return;
                 }
@@ -493,8 +501,8 @@
                         box.style.color = '#92400e';
                         box.style.border = '1px solid #fde68a';
                         box.innerHTML = `
-                            <div style="font-weight: bold; margin-bottom: 4px;">⚠️ Commission Status: PENDING APPROVAL</div>
-                            <div>Your commission (<strong>${escapeHtml(comm.id)}</strong>) has been received and is currently waiting for admin review. <strong>Payment QR code and submission will unlock once accepted by the admin.</strong></div>
+                            <div style="font-weight: bold; margin-bottom: 4px;">Commission Status: PENDING APPROVAL</div>
+                            <div>Your commission has been received and is currently waiting for admin review. <strong>Payment QR code and submission will unlock once accepted by the admin.</strong></div>
                         `;
                     }
                     return;
@@ -512,13 +520,17 @@
                     box.style.color = '#065f46';
                     box.style.border = '1px solid #a7f3d0';
                     box.innerHTML = `
-                        <div style="font-weight: bold; font-size: 13.5px; margin-bottom: 4px;">✅ Commission Approved!</div>
-                        <div>Client: <strong>${escapeHtml(comm.name)}</strong> (${escapeHtml(comm.id)}) &bull; Service: <strong>${escapeHtml(comm.service || 'Commission')}</strong></div>
+                        <div style="font-weight: bold; font-size: 13.5px; margin-bottom: 4px;">Commission Approved!</div>
+                        <div>Client: <strong>${escapeHtml(comm.name)}</strong> &bull; Service: <strong>${escapeHtml(comm.service || 'Commission')}</strong></div>
                         <div style="margin-top: 6px; font-size: 13px;">
                             Agreed Price: <strong>₱${agreed.toLocaleString()}</strong> | Already Paid: ₱${paid.toLocaleString()} | Balance Due: <strong style="color:var(--maroon); font-size:14px;">₱${bal.toLocaleString()}</strong>
                         </div>
                     `;
                 }
+
+                // Show mode of payment selector early (for QR display)
+                const modeEarlyWrap = document.getElementById('payment-mode-early-wrap');
+                if (modeEarlyWrap) modeEarlyWrap.style.display = 'block';
 
                 // Show matching Admin QR Code for selected mode
                 updateDisplayedQrCode();
@@ -557,6 +569,8 @@
             if (box) box.style.display = 'none';
             const qrWrap = document.getElementById('admin-payment-qr-wrap');
             if (qrWrap) qrWrap.style.display = 'none';
+            const modeEarlyWrap = document.getElementById('payment-mode-early-wrap');
+            if (modeEarlyWrap) modeEarlyWrap.style.display = 'none';
             const inputsContainer = document.getElementById('payment-inputs-container');
             if (inputsContainer) {
                 inputsContainer.style.opacity = '0.5';
@@ -571,8 +585,13 @@
             const qrTitle = document.getElementById('admin-payment-qr-title');
             if (!qrWrap || !qrImg) return;
 
-            const modeSelect = document.getElementById('payment-mode-select');
+            // Read mode from the early top selector (shown after approval)
+            const modeSelect = document.getElementById('payment-mode-select-top');
             const selectedMode = (modeSelect ? modeSelect.value : 'GCash').trim();
+
+            // Also sync the hidden input used for form submission
+            const hiddenMode = document.getElementById('payment-mode-select');
+            if (hiddenMode) hiddenMode.value = selectedMode;
 
             const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, {}) || {};
             const qrs = Array.isArray(settings.paymentQrs) ? settings.paymentQrs : [];
@@ -588,11 +607,20 @@
 
             if (match && match.image) {
                 qrImg.src = match.image;
-                if (qrTitle) qrTitle.textContent = `📱 Scan ${escapeHtml(match.method)} QR Code to Pay`;
+                if (qrTitle) qrTitle.textContent = `Scan ${escapeHtml(match.method)} QR Code to Pay`;
                 qrWrap.style.display = 'block';
             } else {
                 qrWrap.style.display = 'none';
             }
+        }
+
+        function syncPaymentMode(val) {
+            // Sync the top mode selector into the hidden one, update QR and other-input
+            const hiddenMode = document.getElementById('payment-mode-select');
+            if (hiddenMode) hiddenMode.value = val;
+            const otherTop = document.getElementById('payment-mode-other-top');
+            if (otherTop) otherTop.style.display = (val === 'Other') ? 'block' : 'none';
+            updateDisplayedQrCode();
         }
 
         function handlePaymentModeChange(val) {
@@ -676,7 +704,7 @@
                 statusEl.style.background = '#e0f2fe';
                 statusEl.style.color = '#0369a1';
                 statusEl.style.border = '1px solid #bae6fd';
-                statusEl.innerHTML = '🤖 <strong>AI / Gemini Scanner:</strong> Analyzing receipt screenshot, extracting amount &amp; payment channel...';
+                statusEl.innerHTML = '<strong>AI / Gemini Scanner:</strong> Analyzing receipt screenshot, extracting amount &amp; payment channel...';
             }
 
             try {
@@ -733,7 +761,7 @@
                         statusEl.style.color = '#065f46';
                         statusEl.style.border = '1px solid #a7f3d0';
                         statusEl.innerHTML = `
-                            <div style="font-weight: bold; margin-bottom: 2px;">✅ AI Verified (${res.source === 'gemini' ? 'Gemini 1.5 Vision' : 'Smart OCR'}):</div>
+                            <div style="font-weight: bold; margin-bottom: 2px;">AI Verified (${res.source === 'gemini' ? 'Gemini 1.5 Vision' : 'Smart OCR'}):</div>
                             <div>${crosscheckMsg} ${refNumber ? `&bull; Ref: <strong>${escapeHtml(refNumber)}</strong>` : ''}</div>
                         `;
                     }
@@ -868,7 +896,11 @@
 
             const commData = {
                 name: clientName,
-                email: document.getElementById('email').value.trim(),
+                email: (() => {
+                    const turnoverPlatform = document.getElementById('email')?.value || '';
+                    const turnoverAccount = document.getElementById('turnover-account')?.value.trim() || '';
+                    return turnoverAccount ? `${turnoverPlatform}: ${turnoverAccount}` : turnoverPlatform;
+                })(),
                 contact: fullContact,
                 service: document.getElementById('service').value,
                 category: 'Client Request',
@@ -877,11 +909,17 @@
                 referenceFiles: uploadedCommissionFiles
             };
 
+            // Include agreed price if provided
+            const agreedPriceVal = document.getElementById('agreed-price')?.value;
+            if (agreedPriceVal && Number(agreedPriceVal) > 0) {
+                commData.agreedPrice = Number(agreedPriceVal);
+            }
+
             try {
                 if (editingId) {
                     // Update existing commission
                     await Storage.updateClientCommission(editingId, commData);
-                    alert(`Commission ${editingId} details updated successfully!`);
+                    alert(`Commission for ${clientName} updated successfully!`);
                     lastCreatedClientName = clientName;
                     clearCommissionSearch();
                 } else {

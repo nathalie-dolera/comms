@@ -35,7 +35,7 @@ module.exports = async (req, res) => {
         .map(s => ({
           id: 'comm-dl-' + s.id,
           date: String(s.deadline).slice(0, 10),
-          title: `Deadline: ${s.name} (${s.service || 'Commission'})`,
+          title: `${s.service || 'Commission'}`,
           type: 'deadline',
           status: 'busy'
         }));
