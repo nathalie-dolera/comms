@@ -2429,10 +2429,6 @@ function renderPendingPaymentProofs() {
             </div>
         </div>`;
     }).join('');
-    } catch(e) {
-        console.error('Error loading QR codes:', e);
-        container.innerHTML = '<div style="grid-column:1/-1;padding:18px;text-align:center;color:#a94442;font-size:13px;">Error loading QR codes. Try refreshing the page.</div>';
-    }
 }
 
 function recordPaymentFromProof(proofId) {
@@ -3291,7 +3287,6 @@ function getPaymentQrsList() {
 function loadPaymentQrCodes() {
     const container = document.getElementById('payment-qrs-list');
     if (!container) return;
-    try {
     const list = getPaymentQrsList();
 
     if (list.length === 0) {
