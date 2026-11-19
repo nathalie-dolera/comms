@@ -530,11 +530,11 @@
                     const agreedAmount = Number(match.agreedPrice) || 0;
                     const balanceAmount = Math.max(0, Number(match.balance) || agreedAmount - paidAmount);
                     
-                    const hasPaid = paidAmount > 0;
+                    const isFullyPaid = (match.paymentType === 'fully_paid') || (balanceAmount === 0 && paidAmount > 0) || (paidAmount > 0 && agreedAmount > 0 && paidAmount >= agreedAmount);
+                    const hasPaid = isFullyPaid || paidAmount > 0 || (match.paymentType === 'downpayment');
                     let paymentStatusLabel = 'Not Paid';
                     let paymentStatusColor = '#9b1c1c';
                     if (hasPaid) {
-                        const isFullyPaid = (match.paymentType === 'fully_paid') || (balanceAmount === 0 && paidAmount > 0) || (paidAmount > 0 && agreedAmount > 0 && paidAmount >= agreedAmount);
                         paymentStatusLabel = isFullyPaid ? 'Fully Paid' : '50% DP';
                         if (!isFullyPaid && balanceAmount > 0) {
                             paymentStatusLabel += ` (Balance: ₱${balanceAmount.toLocaleString()})`;

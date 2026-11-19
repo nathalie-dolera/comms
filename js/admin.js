@@ -587,7 +587,7 @@ function renderSubmissions() {
         const balAmt = matchedPayment ? (Number(matchedPayment.balance) || Math.max(0, agreedAmt - paidAmt)) : (Number(sub.balance) || Math.max(0, agreedAmt - paidAmt));
         const resolvedPaymentType = matchedPayment?.paymentType || sub.paymentType;
         const isFullyPaid = resolvedPaymentType === 'fully_paid' || (paidAmt > 0 && agreedAmt > 0 && paidAmt >= agreedAmt) || (paidAmt > 0 && balAmt === 0);
-        const hasPayment = paidAmt > 0 || !!sub.downpaymentReceipt || (matchedPayment && (matchedPayment.status === 'Confirmed' || matchedPayment.status === 'Submitted'));
+        const hasPayment = isFullyPaid || paidAmt > 0 || !!sub.downpaymentReceipt || resolvedPaymentType === 'downpayment' || (matchedPayment && (matchedPayment.status === 'Confirmed' || matchedPayment.status === 'Submitted'));
         let paymentLabel = 'Not Paid';
         let badgeClass = 'badge-unpaid';
         if (hasPayment) {
@@ -606,7 +606,15 @@ function renderSubmissions() {
             <td style="color: #2a1010;">${sub.deadline || 'Flexible'}</td>
             <td>
                 <div style="font-weight: 700; text-transform: uppercase; color: var(--maroon-dark); font-size: 13px;">${sub.payment || 'GCash'}</div>
-                <span class="payment-badge ${badgeClass}">${paymentLabel}</span>
+                <div style="margin-top: 3px;">
+                    <select class="payment-badge ${badgeClass}" 
+                            onchange="setCommissionPaymentStatus('${sub.id}', this.value)"
+                            style="cursor: pointer; outline: none; font-size: 11px; padding: 2px 6px;">
+                        <option value="unpaid" ${!hasPayment ? 'selected' : ''}>Not Paid</option>
+                        <option value="downpayment" ${hasPayment && !isFullyPaid ? 'selected' : ''}>50% DP</option>
+                        <option value="fully_paid" ${isFullyPaid ? 'selected' : ''}>Fully Paid</option>
+                    </select>
+                </div>
             </td>
             <td>
                 ${isPending ? `
@@ -711,6 +719,125 @@ function saveViewTabAdminNote(id) {
     }
 }
 
+function setCommissionPaymentStatus(id, newStatus) {
+    const subs = Storage.get(Storage.KEYS.SUBMISSIONS, []);
+    const subIdx = subs.findIndex(s => s.id === id);
+    if (subIdx === -1) return;
+
+    const sub = subs[subIdx];
+    const allPayments = Storage.get(Storage.KEYS.PAYMENTS, []);
+    let payIdx = allPayments.findIndex(p => p.commId === id);
+    if (payIdx === -1 && sub.name) {
+        payIdx = allPayments.findIndex(p => p.clientName && p.clientName.trim().toLowerCase() === sub.name.trim().toLowerCase());
+    }
+
+    const agreedAmt = Number(sub.agreedPrice) || (payIdx !== -1 ? Number(allPayments[payIdx].agreedPrice) : (Number(sub.amountPaid) || 0));
+
+    if (newStatus === 'fully_paid') {
+        sub.paymentType = 'fully_paid';
+        if (agreedAmt > 0) {
+            sub.amountPaid = agreedAmt;
+            sub.agreedPrice = agreedAmt;
+            sub.balance = 0;
+        } else if (Number(sub.amountPaid) > 0) {
+            sub.agreedPrice = Number(sub.amountPaid);
+            sub.balance = 0;
+        } else {
+            sub.balance = 0;
+        }
+
+        if (payIdx !== -1) {
+            allPayments[payIdx].paymentType = 'fully_paid';
+            allPayments[payIdx].status = 'Confirmed';
+            if (agreedAmt > 0) {
+                allPayments[payIdx].agreedPrice = agreedAmt;
+                allPayments[payIdx].amount = agreedAmt;
+                allPayments[payIdx].balance = 0;
+            } else if (Number(allPayments[payIdx].amount) > 0) {
+                allPayments[payIdx].agreedPrice = Number(allPayments[payIdx].amount);
+                allPayments[payIdx].balance = 0;
+            } else {
+                allPayments[payIdx].balance = 0;
+            }
+        } else {
+            allPayments.unshift({
+                id: 'PAY-' + Date.now().toString(36).toUpperCase(),
+                commId: sub.id,
+                clientName: sub.name,
+                date: new Date().toISOString().split('T')[0],
+                service: sub.service || 'General Commission',
+                agreedPrice: agreedAmt || Number(sub.amountPaid) || 0,
+                amount: agreedAmt || Number(sub.amountPaid) || 0,
+                balance: 0,
+                mode: sub.payment || 'GCash',
+                paymentType: 'fully_paid',
+                status: 'Confirmed',
+                notes: 'Marked Fully Paid in admin',
+                receipt: sub.downpaymentReceipt || ''
+            });
+        }
+        showToast(`Marked ${sub.name} as Fully Paid!`);
+    } else if (newStatus === 'downpayment') {
+        sub.paymentType = 'downpayment';
+        if (agreedAmt > 0) {
+            sub.agreedPrice = agreedAmt;
+            sub.amountPaid = Math.round(agreedAmt * 0.5);
+            sub.balance = agreedAmt - sub.amountPaid;
+        }
+
+        if (payIdx !== -1) {
+            allPayments[payIdx].paymentType = 'downpayment';
+            allPayments[payIdx].status = 'Confirmed';
+            if (agreedAmt > 0) {
+                allPayments[payIdx].agreedPrice = agreedAmt;
+                allPayments[payIdx].amount = Math.round(agreedAmt * 0.5);
+                allPayments[payIdx].balance = agreedAmt - allPayments[payIdx].amount;
+            }
+        } else {
+            const paidAmt = agreedAmt > 0 ? Math.round(agreedAmt * 0.5) : 0;
+            allPayments.unshift({
+                id: 'PAY-' + Date.now().toString(36).toUpperCase(),
+                commId: sub.id,
+                clientName: sub.name,
+                date: new Date().toISOString().split('T')[0],
+                service: sub.service || 'General Commission',
+                agreedPrice: agreedAmt,
+                amount: paidAmt,
+                balance: Math.max(0, agreedAmt - paidAmt),
+                mode: sub.payment || 'GCash',
+                paymentType: 'downpayment',
+                status: 'Confirmed',
+                notes: 'Marked 50% DP in admin',
+                receipt: sub.downpaymentReceipt || ''
+            });
+        }
+        showToast(`Marked ${sub.name} as 50% DP.`);
+    } else if (newStatus === 'unpaid') {
+        sub.paymentType = 'unpaid';
+        sub.amountPaid = 0;
+        sub.balance = agreedAmt;
+        if (payIdx !== -1) {
+            allPayments[payIdx].paymentType = 'unpaid';
+            allPayments[payIdx].status = 'Unpaid';
+            allPayments[payIdx].amount = 0;
+            allPayments[payIdx].balance = agreedAmt;
+        }
+        showToast(`Marked ${sub.name} as Not Paid.`);
+    }
+
+    Storage.set(Storage.KEYS.SUBMISSIONS, subs);
+    Storage.set(Storage.KEYS.PAYMENTS, allPayments);
+
+    renderSubmissions();
+    const viewSection = document.getElementById('tab-view-commission');
+    if (viewSection && viewSection.classList.contains('active')) {
+        renderCommissionViewTab(subs[subIdx]);
+    }
+    if (typeof renderPaymentsTracker === 'function') {
+        renderPaymentsTracker();
+    }
+}
+
 function renderCommissionViewTab(sub) {
     const container = document.getElementById('tab-view-commission');
     if (!container) return;
@@ -723,7 +850,7 @@ function renderCommissionViewTab(sub) {
     const balAmt = matchedPayment ? (Number(matchedPayment.balance) || Math.max(0, agreedAmt - paidAmt)) : (Number(sub.balance) || Math.max(0, agreedAmt - paidAmt));
     const resolvedPaymentType = matchedPayment?.paymentType || sub.paymentType;
     const isFullyPaid = resolvedPaymentType === 'fully_paid' || (paidAmt > 0 && agreedAmt > 0 && paidAmt >= agreedAmt) || (paidAmt > 0 && balAmt === 0);
-    const hasPayment = paidAmt > 0 || !!sub.downpaymentReceipt || (matchedPayment && (matchedPayment.status === 'Confirmed' || matchedPayment.status === 'Submitted'));
+    const hasPayment = isFullyPaid || paidAmt > 0 || !!sub.downpaymentReceipt || resolvedPaymentType === 'downpayment' || (matchedPayment && (matchedPayment.status === 'Confirmed' || matchedPayment.status === 'Submitted'));
 
     let paymentLabel = 'Not Paid';
     let badgeClass = 'badge-unpaid';
@@ -745,6 +872,11 @@ function renderCommissionViewTab(sub) {
                 ${(!sub.status || sub.status === 'Pending') ? `
                     <button class="btn-action" style="background:#2e7d32; color:#fff; font-weight:700;" onclick="acceptCommission('${sub.id}'); switchToViewCommissionTab('${sub.id}');">✓ Accept Commission</button>
                 ` : ''}
+                ${!isFullyPaid ? `
+                    <button class="btn-action" style="background:#15803d; color:#fff; font-weight:700;" onclick="setCommissionPaymentStatus('${sub.id}', 'fully_paid')">✓ Mark as Fully Paid</button>
+                ` : `
+                    <button class="btn-action" style="background:#b45309; color:#fff; font-weight:700;" onclick="setCommissionPaymentStatus('${sub.id}', 'downpayment')">↺ Revert to 50% DP</button>
+                `}
                 <button class="btn-action" style="background:#5a4a3a; color:#fff;" onclick="editSubmissionFromView('${sub.id}')">Edit Commission</button>
                 <button class="btn-action btn-secondary" onclick="recordPaymentFromCommission('${sub.id}')">+ Log Payment in Sheet</button>
                 <button class="btn-action btn-danger" onclick="deleteSubmission('${sub.id}'); switchBackToCommissionsList();">Delete</button>
@@ -781,12 +913,30 @@ function renderCommissionViewTab(sub) {
 
                 <div style="background: #faf4ee; padding: 12px 14px; border-radius: 6px; border: 1px solid #e2d2c2;">
                     <span style="font-size: 11px; text-transform: uppercase; font-family:'Special Elite', monospace; color: var(--maroon); font-weight: bold; display: block; margin-bottom: 4px;">Payment Status</span>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span class="payment-badge ${badgeClass}" style="font-size: 12px; padding: 4px 10px;">${paymentLabel}</span>
-                        <span style="font-size: 12px; font-weight: 600; color: #555;">via ${escapeHtml(sub.payment || 'GCash')}</span>
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span class="payment-badge ${badgeClass}" style="font-size: 12px; padding: 4px 10px;">${paymentLabel}</span>
+                            <span style="font-size: 12px; font-weight: 600; color: #555;">via ${escapeHtml(sub.payment || 'GCash')}</span>
+                        </div>
+                        <select class="payment-badge ${badgeClass}" onchange="setCommissionPaymentStatus('${sub.id}', this.value)" style="cursor: pointer; font-size: 11.5px; padding: 3px 6px; outline: none;">
+                            <option value="unpaid" ${!hasPayment ? 'selected' : ''}>Not Paid</option>
+                            <option value="downpayment" ${hasPayment && !isFullyPaid ? 'selected' : ''}>50% DP</option>
+                            <option value="fully_paid" ${isFullyPaid ? 'selected' : ''}>Fully Paid</option>
+                        </select>
+                    </div>
+                    <div style="margin-top: 8px;">
+                        ${!isFullyPaid ? `
+                            <button type="button" class="btn-action" style="background:#15803d; color:#fff; font-size: 11.5px; font-weight: 700; padding: 5px 12px; border-radius: 4px; cursor: pointer; width: 100%; border: none;" onclick="setCommissionPaymentStatus('${sub.id}', 'fully_paid')">
+                                ✓ Mark as Fully Paid
+                            </button>
+                        ` : `
+                            <button type="button" class="btn-action" style="background:#b45309; color:#fff; font-size: 11.5px; font-weight: 700; padding: 5px 12px; border-radius: 4px; cursor: pointer; width: 100%; border: none;" onclick="setCommissionPaymentStatus('${sub.id}', 'downpayment')">
+                                ↺ Set to 50% DP
+                            </button>
+                        `}
                     </div>
                     ${agreedAmt > 0 ? `
-                        <div style="font-size: 11.5px; color: #555; margin-top: 4px;">
+                        <div style="font-size: 11.5px; color: #555; margin-top: 6px;">
                             ₱${paidAmt.toLocaleString()} paid of ₱${agreedAmt.toLocaleString()} ${balAmt > 0 ? `(₱${balAmt.toLocaleString()} due)` : ''}
                         </div>
                     ` : ''}
