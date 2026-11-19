@@ -341,6 +341,9 @@ function initNavigation() {
             if (tabName === 'services') renderServicesList();
             if (tabName === 'calendar') renderCalendar();
             if (tabName === 'submissions') renderSubmissions();
+            if (tabName === 'view-commission') {
+                // If clicked from sidebar, stay on current view or switch back
+            }
             if (tabName === 'payments') { renderPaymentsTracker(); loadPaymentQrCodes(); }
             if (tabName === 'feedback') renderFeedbacks();
             if (tabName === 'output') renderOutputs();
@@ -658,7 +661,262 @@ function changeCommissionStatus(id, newStatus) {
     }
 }
 
+
+// ============================================
+// DEDICATED VIEW COMMISSION TAB
+// ============================================
+function switchToViewCommissionTab(id) {
+    const list = Storage.get(Storage.KEYS.SUBMISSIONS, []);
+    const sub = list.find(s => s.id === id);
+    if (!sub) return;
+
+    // Show and activate the View Commission nav button in the sidebar
+    const navViewBtn = document.getElementById('nav-item-view-commission');
+    if (navViewBtn) {
+        navViewBtn.style.display = 'flex';
+        document.querySelectorAll('.admin-nav-item').forEach(btn => btn.classList.remove('active'));
+        navViewBtn.classList.add('active');
+    }
+
+    // Hide all tab sections, show tab-view-commission
+    document.querySelectorAll('.tab-content').forEach(s => s.classList.remove('active'));
+    const viewSection = document.getElementById('tab-view-commission');
+    if (viewSection) {
+        viewSection.classList.add('active');
+    }
+
+    renderCommissionViewTab(sub);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function switchBackToCommissionsList() {
+    document.querySelectorAll('.admin-nav-item').forEach(b => b.classList.remove('active'));
+    document.querySelector('.admin-nav-item[data-tab="submissions"]')?.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(s => s.classList.remove('active'));
+    document.getElementById('tab-submissions')?.classList.add('active');
+    const navViewBtn = document.getElementById('nav-item-view-commission');
+    if (navViewBtn) navViewBtn.style.display = 'none';
+    renderSubmissions();
+}
+
+function saveViewTabAdminNote(id) {
+    const note = document.getElementById('view-tab-admin-note')?.value.trim() || '';
+    const list = Storage.get(Storage.KEYS.SUBMISSIONS, []);
+    const idx = list.findIndex(s => s.id === id);
+    if (idx !== -1) {
+        list[idx].adminNote = note;
+        Storage.set(Storage.KEYS.SUBMISSIONS, list);
+        showToast('Status note saved!');
+        switchToViewCommissionTab(id);
+    }
+}
+
+function renderCommissionViewTab(sub) {
+    const container = document.getElementById('tab-view-commission');
+    if (!container) return;
+
+    const allPayments = Storage.get(Storage.KEYS.PAYMENTS, []);
+    const matchedPayment = allPayments.find(p => p.commId === sub.id) ||
+        allPayments.find(p => p.clientName && sub.name && p.clientName.trim().toLowerCase() === sub.name.trim().toLowerCase());
+    const paidAmt = Number(matchedPayment?.amount) || Number(sub.amountPaid) || 0;
+    const agreedAmt = Number(matchedPayment?.agreedPrice) || Number(sub.agreedPrice) || 0;
+    const balAmt = matchedPayment ? (Number(matchedPayment.balance) || Math.max(0, agreedAmt - paidAmt)) : (Number(sub.balance) || Math.max(0, agreedAmt - paidAmt));
+    const resolvedPaymentType = matchedPayment?.paymentType || sub.paymentType;
+    const isFullyPaid = resolvedPaymentType === 'fully_paid' || (paidAmt > 0 && agreedAmt > 0 && paidAmt >= agreedAmt) || (paidAmt > 0 && balAmt === 0);
+    const hasPayment = paidAmt > 0 || !!sub.downpaymentReceipt || (matchedPayment && (matchedPayment.status === 'Confirmed' || matchedPayment.status === 'Submitted'));
+
+    let paymentLabel = 'Not Paid';
+    let badgeClass = 'badge-unpaid';
+    if (hasPayment) {
+        paymentLabel = isFullyPaid ? 'Fully Paid' : '50% DP';
+        badgeClass = isFullyPaid ? 'badge-fully-paid' : 'badge-downpayment';
+    }
+
+    const refFiles = Array.isArray(sub.referenceFiles) ? sub.referenceFiles : [];
+
+    container.innerHTML = `
+        <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <button type="button" class="btn-action btn-secondary" onclick="switchBackToCommissionsList()" style="padding: 8px 16px; font-size: 13px; font-weight: 600;">
+                    ← Back to Commissions
+                </button>
+                <h2 style="font-family:'Special Elite', monospace; font-size: 20px; color: var(--paper-cream); margin: 0; text-transform: uppercase;">
+                    Commission Details: <span style="color: var(--rose);">${escapeHtml(sub.id)}</span>
+                </h2>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                ${(!sub.status || sub.status === 'Pending') ? `
+                    <button class="btn-action" style="background:#2e7d32; color:#fff; font-weight:700;" onclick="acceptCommission('${sub.id}'); switchToViewCommissionTab('${sub.id}');">✓ Accept Commission</button>
+                ` : ''}
+                <button class="btn-action" style="background:#5a4a3a; color:#fff;" onclick="editSubmissionFromView('${sub.id}')">Edit Commission</button>
+                <button class="btn-action btn-secondary" onclick="recordPaymentFromCommission('${sub.id}')">+ Log Payment in Sheet</button>
+                <button class="btn-action btn-danger" onclick="deleteSubmission('${sub.id}'); switchBackToCommissionsList();">Delete</button>
+            </div>
+        </div>
+
+        <!-- MAIN COMMISSION DETAILS CARD -->
+        <div class="admin-card" style="margin-bottom: 20px;">
+            <div class="admin-card-header" style="border-bottom: 1px dashed var(--rose); padding-bottom: 12px; margin-bottom: 16px;">
+                <div>
+                    <span style="font-size: 11px; text-transform: uppercase; font-family:'Special Elite', monospace; color: var(--rose-light); font-weight: bold;">Client Name</span>
+                    <h1 style="font-family: 'Playfair Display', serif; font-size: 26px; color: var(--maroon-dark); margin: 2px 0 0 0;">
+                        ${escapeHtml(sub.name)}
+                    </h1>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <span class="status-pill ${getStatusPillClass(sub.status)}" style="font-size: 13px; padding: 6px 14px;">
+                        ${sub.status || 'Pending'}
+                    </span>
+                    <select onchange="updateSubmissionStatus('${sub.id}', this.value); switchToViewCommissionTab('${sub.id}');" class="btn-status-select" style="padding: 6px 10px; font-size: 12px;">
+                        <option value="Accepted" ${sub.status === 'Accepted' ? 'selected' : ''}>Set: Accepted</option>
+                        <option value="In Progress" ${sub.status === 'In Progress' ? 'selected' : ''}>Set: In Progress</option>
+                        <option value="Done" ${sub.status === 'Done' ? 'selected' : ''}>Set: Done</option>
+                        <option value="Turned Over" ${sub.status === 'Turned Over' ? 'selected' : ''}>Set: Turned Over</option>
+                        <option value="Declined" ${sub.status === 'Declined' ? 'selected' : ''}>Set: Declined</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- KEY INFO GRID -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px;">
+                <div style="background: #faf4ee; padding: 12px 14px; border-radius: 6px; border: 1px solid #e2d2c2;">
+                    <span style="font-size: 11px; text-transform: uppercase; font-family:'Special Elite', monospace; color: var(--maroon); font-weight: bold; display: block; margin-bottom: 4px;">Service</span>
+                    <div style="font-weight: 700; color: #2a1010; font-size: 14px;">${escapeHtml(sub.service || 'General Commission')}</div>
+                    <div style="font-size: 11px; color: #777; margin-top: 2px;">${escapeHtml(sub.category || 'Client Request')}</div>
+                </div>
+
+                <div style="background: #faf4ee; padding: 12px 14px; border-radius: 6px; border: 1px solid #e2d2c2;">
+                    <span style="font-size: 11px; text-transform: uppercase; font-family:'Special Elite', monospace; color: var(--maroon); font-weight: bold; display: block; margin-bottom: 4px;">Payment Status</span>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="payment-badge ${badgeClass}" style="font-size: 12px; padding: 4px 10px;">${paymentLabel}</span>
+                        <span style="font-size: 12px; font-weight: 600; color: #555;">via ${escapeHtml(sub.payment || 'GCash')}</span>
+                    </div>
+                    ${agreedAmt > 0 ? `
+                        <div style="font-size: 11.5px; color: #555; margin-top: 4px;">
+                            ₱${paidAmt.toLocaleString()} paid of ₱${agreedAmt.toLocaleString()} ${balAmt > 0 ? `(₱${balAmt.toLocaleString()} due)` : ''}
+                        </div>
+                    ` : ''}
+                </div>
+
+                <div style="background: #faf4ee; padding: 12px 14px; border-radius: 6px; border: 1px solid #e2d2c2;">
+                    <span style="font-size: 11px; text-transform: uppercase; font-family:'Special Elite', monospace; color: var(--maroon); font-weight: bold; display: block; margin-bottom: 4px;">Target Deadline</span>
+                    <div style="font-weight: 700; color: #2a1010; font-size: 14px;">${sub.deadline ? escapeHtml(sub.deadline) : 'Flexible'}</div>
+                </div>
+
+                <div style="background: #faf4ee; padding: 12px 14px; border-radius: 6px; border: 1px solid #e2d2c2;">
+                    <span style="font-size: 11px; text-transform: uppercase; font-family:'Special Elite', monospace; color: var(--maroon); font-weight: bold; display: block; margin-bottom: 4px;">Where to Turnover</span>
+                    <div style="font-weight: 700; color: #2a1010; font-size: 13px; word-break: break-all;">
+                        ${sub.email ? escapeHtml(sub.email) : (sub.contact ? escapeHtml(sub.contact) : 'Not specified')}
+                    </div>
+                </div>
+            </div>
+
+            <!-- PROJECT DESCRIPTION -->
+            <div style="margin-bottom: 22px;">
+                <label style="color: var(--maroon); font-weight: bold; font-family:'Special Elite', monospace; text-transform: uppercase; font-size: 12px; display: block; margin-bottom: 6px;">
+                    Project Description
+                </label>
+                <div style="background: #ffffff; border: 1px solid #d4c4b0; border-radius: 6px; padding: 16px; font-size: 13.5px; line-height: 1.6; color: #2a1010; white-space: pre-wrap;">
+                    ${escapeHtml(sub.description || 'No description provided.')}
+                </div>
+            </div>
+
+            <!-- ATTACHED DOCUMENTS & FILES SECTION -->
+            <div style="margin-bottom: 24px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <label style="color: var(--maroon); font-weight: bold; font-family:'Special Elite', monospace; text-transform: uppercase; font-size: 13px;">
+                        📁 Attached Documents &amp; Files (${refFiles.length})
+                    </label>
+                </div>
+
+                ${refFiles.length === 0 ? `
+                    <div style="background: #faf4ee; border: 1px dashed #dcd0c2; border-radius: 6px; padding: 18px; text-align: center; color: #886560; font-size: 13px; font-family: 'Special Elite', monospace;">
+                        No files or documents attached with this commission request.
+                    </div>
+                ` : `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px;">
+                        ${refFiles.map((f, fIdx) => {
+                            const isImg = f.data && (f.data.startsWith('data:image/') || (f.type && f.type.startsWith('image/')));
+                            return `
+                            <div style="background: #ffffff; border: 1px solid #dcd0c2; border-radius: 8px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; flex-direction: column; justify-content: space-between; transition: all 0.2s;">
+                                <div>
+                                    ${isImg ? `
+                                        <div style="width: 100%; height: 160px; border-radius: 6px; overflow: hidden; background: #faf4ee; border: 1px dashed #dcd0c2; margin-bottom: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="previewReferenceImage('${f.data}', '${escapeHtml(f.name)}')">
+                                            <img src="${f.data}" alt="${escapeHtml(f.name)}" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                                        </div>
+                                    ` : `
+                                        <div style="width: 100%; height: 90px; border-radius: 6px; background: #faf4ee; border: 1px dashed #dcd0c2; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; font-size: 38px;">
+                                            📄
+                                        </div>
+                                    `}
+                                    <div style="font-weight: 700; font-size: 13.5px; color: var(--maroon-dark); word-break: break-all; margin-bottom: 4px; font-family: 'Poppins', sans-serif;">
+                                        ${escapeHtml(f.name || 'Attached File')}
+                                    </div>
+                                    <div style="font-size: 11.5px; color: #777; margin-bottom: 12px;">
+                                        ${escapeHtml(f.size || '')} ${f.type ? '• ' + escapeHtml(f.type) : ''}
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 8px; padding-top: 8px; border-top: 1px solid #f0e6dc;">
+                                    ${f.data ? `
+                                        <a href="${f.data}" target="_blank" class="btn-action" style="flex: 1; text-align: center; text-decoration: none; padding: 8px; font-size: 12px; background: #5a4a3a; color: #fff; border-radius: 4px; font-family:'Special Elite', monospace;">
+                                            👁 Open / View
+                                        </a>
+                                        <a href="${f.data}" download="${escapeHtml(f.name)}" class="btn-action btn-primary" style="flex: 1; text-align: center; text-decoration: none; padding: 8px; font-size: 12px; border-radius: 4px; font-family:'Special Elite', monospace;">
+                                            ⬇ Download
+                                        </a>
+                                    ` : `
+                                        <span style="font-size: 11.5px; color: #999; font-style: italic; width: 100%; text-align: center; padding: 6px;">
+                                            File name on file (legacy submission)
+                                        </span>
+                                    `}
+                                </div>
+                            </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `}
+            </div>
+
+            <!-- PAYMENT PROOF SCREENSHOT -->
+            <div style="margin-bottom: 22px;">
+                <label style="color: var(--maroon); font-weight: bold; font-family:'Special Elite', monospace; text-transform: uppercase; font-size: 12px; display: block; margin-bottom: 6px;">
+                    Payment Proof Receipt / Screenshot
+                </label>
+                <div style="background: #faf4ee; border: 1px dashed #dcd0c2; border-radius: 6px; padding: 18px; text-align: center;">
+                    ${sub.downpaymentReceipt ? `
+                        <div style="display: inline-block; cursor: pointer;" onclick="previewReferenceImage('${sub.downpaymentReceipt}', 'Payment Proof - ${escapeHtml(sub.name)}')">
+                            <img src="${sub.downpaymentReceipt}" alt="Payment Proof" style="max-height: 240px; max-width: 100%; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.12); border: 1px solid #dcd0c2;">
+                            <div style="margin-top: 8px; font-size: 11.5px; color: #7a4e4e; font-family:'Special Elite', monospace;">Click image to view full size</div>
+                        </div>
+                    ` : `
+                        <span style="color: #886560; font-style: italic; font-size: 13px; font-family:'Special Elite', monospace;">
+                            No payment receipt screenshot uploaded for this commission.
+                        </span>
+                    `}
+                </div>
+            </div>
+
+            <!-- ADMIN STATUS NOTE -->
+            <div>
+                <label style="color: var(--maroon); font-weight: bold; font-family:'Special Elite', monospace; text-transform: uppercase; font-size: 12px; display: block; margin-bottom: 6px;">
+                    Admin Status Note <small style="font-weight:400; color:#7a4e4e;">(visible to client on tracker page)</small>
+                </label>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <textarea id="view-tab-admin-note" rows="2" style="flex: 1; min-width: 250px; padding: 10px; border: 1px solid #cbb8a8; border-radius: 4px; font-size: 13px;" placeholder="e.g. Starting working on your project today!">${escapeHtml(sub.adminNote || '')}</textarea>
+                    <button type="button" class="btn-action btn-primary" onclick="saveViewTabAdminNote('${sub.id}')" style="padding: 10px 18px; font-size: 12px; flex-shrink: 0; align-self: flex-start;">
+                        Save Note
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
 function viewSubmissionDetail(id) {
+    switchToViewCommissionTab(id);
+    return;
+}
+function _oldViewSubmissionDetail(id) {
     const list = Storage.get(Storage.KEYS.SUBMISSIONS, []);
     const sub = list.find(s => s.id === id);
     if (!sub) return;
