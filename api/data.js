@@ -31,7 +31,7 @@ module.exports = async (req, res) => {
       const subRow = await db.collection('appData').findOne({ key: 'thalie_submissions' });
       const allSubs = Array.isArray(subRow?.value) ? subRow.value : [];
       const acceptedDeadlines = allSubs
-        .filter(s => s.deadline && (s.status === 'Accepted' || s.status === 'In Progress' || s.status === 'Done'))
+        .filter(s => s.deadline && (s.status === 'Accepted' || s.status === 'In Progress' || s.status === 'Done' || s.status === 'Turned Over'))
         .map(s => ({
           id: 'comm-dl-' + s.id,
           date: String(s.deadline).slice(0, 10),

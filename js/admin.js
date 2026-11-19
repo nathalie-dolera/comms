@@ -483,11 +483,18 @@ function renderSubmissions() {
         return;
     }
 
+    // Cross-reference payments tracker to get real payment status per commission
+    const allPayments = Storage.get(Storage.KEYS.PAYMENTS, []);
+
     tbody.innerHTML = submissions.map(sub => {
-        const paidAmt = Number(sub.amountPaid) || 0;
-        const agreedAmt = Number(sub.agreedPrice) || 0;
-        const balAmt = Number(sub.balance) || Math.max(0, agreedAmt - paidAmt);
-        const isFullyPaid = sub.paymentType === 'fully_paid' || (paidAmt > 0 && agreedAmt > 0 && paidAmt >= agreedAmt) || (paidAmt > 0 && balAmt === 0);
+        // Look up latest matching payment record for this commission
+        const matchedPayment = allPayments.find(p => p.commId === sub.id) ||
+            allPayments.find(p => p.clientName && sub.name && p.clientName.trim().toLowerCase() === sub.name.trim().toLowerCase());
+        const paidAmt = Number(matchedPayment?.amount) || Number(sub.amountPaid) || 0;
+        const agreedAmt = Number(matchedPayment?.agreedPrice) || Number(sub.agreedPrice) || 0;
+        const balAmt = matchedPayment ? (Number(matchedPayment.balance) || Math.max(0, agreedAmt - paidAmt)) : (Number(sub.balance) || Math.max(0, agreedAmt - paidAmt));
+        const resolvedPaymentType = matchedPayment?.paymentType || sub.paymentType;
+        const isFullyPaid = resolvedPaymentType === 'fully_paid' || (paidAmt > 0 && agreedAmt > 0 && paidAmt >= agreedAmt) || (paidAmt > 0 && balAmt === 0);
         const paymentLabel = isFullyPaid ? 'Fully Paid' : '50% DP';
         const badgeClass = isFullyPaid ? 'badge-fully-paid' : 'badge-downpayment';
         const isPending = !sub.status || sub.status === 'Pending';
@@ -563,10 +570,15 @@ function viewSubmissionDetail(id) {
     document.getElementById('modal-sub-id').textContent = 'Commission Details';
     const container = document.getElementById('modal-sub-content');
 
-    const detPaidAmt = Number(sub.amountPaid) || 0;
-    const detAgreedAmt = Number(sub.agreedPrice) || 0;
-    const detBalAmt = Number(sub.balance) || Math.max(0, detAgreedAmt - detPaidAmt);
-    const isFullyPaid = sub.paymentType === 'fully_paid' || (detPaidAmt > 0 && detAgreedAmt > 0 && detPaidAmt >= detAgreedAmt) || (detPaidAmt > 0 && detBalAmt === 0);
+    // Cross-reference payments tracker for real payment status
+    const detPayments = Storage.get(Storage.KEYS.PAYMENTS, []);
+    const detMatchedPay = detPayments.find(p => p.commId === sub.id) ||
+        detPayments.find(p => p.clientName && sub.name && p.clientName.trim().toLowerCase() === sub.name.trim().toLowerCase());
+    const detPaidAmt = Number(detMatchedPay?.amount) || Number(sub.amountPaid) || 0;
+    const detAgreedAmt = Number(detMatchedPay?.agreedPrice) || Number(sub.agreedPrice) || 0;
+    const detBalAmt = detMatchedPay ? (Number(detMatchedPay.balance) || Math.max(0, detAgreedAmt - detPaidAmt)) : (Number(sub.balance) || Math.max(0, detAgreedAmt - detPaidAmt));
+    const detResolvedType = detMatchedPay?.paymentType || sub.paymentType;
+    const isFullyPaid = detResolvedType === 'fully_paid' || (detPaidAmt > 0 && detAgreedAmt > 0 && detPaidAmt >= detAgreedAmt) || (detPaidAmt > 0 && detBalAmt === 0);
     const paymentLabel = isFullyPaid ? 'Fully Paid' : '50% DP';
     const badgeClass = isFullyPaid ? 'badge-fully-paid' : 'badge-downpayment';
 
@@ -1398,7 +1410,7 @@ function renderCalendar() {
     const baseEvents = Storage.get(Storage.KEYS.CALENDAR, []);
     const subs = Storage.get(Storage.KEYS.SUBMISSIONS, []);
     const commDeadlines = subs
-        .filter(s => s.deadline && (s.status === 'Accepted' || s.status === 'In Progress' || s.status === 'Done'))
+        .filter(s => s.deadline && (s.status === 'Accepted' || s.status === 'In Progress' || s.status === 'Done' || s.status === 'Turned Over'))
         .map(s => ({
             id: 'comm-dl-' + s.id,
             date: String(s.deadline).slice(0, 10),
