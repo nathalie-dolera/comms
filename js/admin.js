@@ -227,8 +227,18 @@ async function handleLoginSubmit(event) {
         const user = await Storage.login(accountNameInput, passwordInput);
         if (errorEl) errorEl.style.display = 'none';
         checkAuth();
+        // Re-render all sections with fresh admin data now that session is active
+        renderSubmissions();
+        renderPaymentsTracker();
+        renderFeedbacks();
+        renderOutputs();
+        renderCalendar();
+        renderServicesList();
+        renderClientAccounts();
         renderCommissionerRegistrations();
         renderAccountApprovals();
+        loadPaymentQrCode();
+        updateBadges();
         showToast(`Welcome, ${user.accountName}!`);
     } catch (error) {
         if (errorEl) {
