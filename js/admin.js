@@ -2279,11 +2279,29 @@ function renderServicesList() {
     `).join('');
 }
 
+function handleServiceCategorySelect(val) {
+    if (val) {
+        document.getElementById('service-category-input').value = val;
+    }
+}
+
+function populateServiceCategoryDropdown(currentVal) {
+    const select = document.getElementById('service-category-select');
+    if (!select) return;
+    const services = getServicesList();
+    const categories = [...new Set(services.map(s => s.category || 'General').filter(Boolean))].sort();
+    select.innerHTML = '<option value="">-- Select existing category --</option>' +
+        categories.map(c => `<option value="${escapeHtml(c)}" ${c === currentVal ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('') +
+        '<option value="__new__">+ Type a new category below</option>';
+    if (currentVal) select.value = currentVal;
+}
+
 function openAddServiceModal() {
     document.getElementById('modal-service-title').textContent = 'Add Service';
     document.getElementById('service-edit-index').value = '-1';
     document.getElementById('service-name-input').value = '';
     document.getElementById('service-category-input').value = '';
+    populateServiceCategoryDropdown('');
     openModal('modal-service');
 }
 
@@ -2296,6 +2314,7 @@ function openEditServiceModal(index) {
     document.getElementById('service-edit-index').value = index;
     document.getElementById('service-name-input').value = item.name || '';
     document.getElementById('service-category-input').value = item.category || '';
+    populateServiceCategoryDropdown(item.category || '');
     openModal('modal-service');
 }
 

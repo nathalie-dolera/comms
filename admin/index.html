@@ -1071,7 +1071,10 @@
                 </div>
                 <div class="admin-form-group">
                     <label>Category Group</label>
-                    <input type="text" id="service-category-input" required placeholder="e.g. Graphic Design, Academic and Document, Web / App">
+                    <select id="service-category-select" onchange="handleServiceCategorySelect(this.value)" style="width:100%; margin-bottom:6px;">
+                        <option value="">-- Select existing category --</option>
+                    </select>
+                    <input type="text" id="service-category-input" required placeholder="Or type a new category group name">
                 </div>
                 <button type="submit" class="btn-action btn-primary" style="width: 100%; padding: 10px;">Save Service</button>
             </form>
