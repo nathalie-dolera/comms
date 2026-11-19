@@ -530,10 +530,10 @@
                     const agreedAmount = Number(match.agreedPrice) || 0;
                     const balanceAmount = Math.max(0, Number(match.balance) || agreedAmount - paidAmount);
                     
-                    const hasPaymentData = paidAmount > 0 || (match.paymentType && match.paymentType !== 'downpayment') || match.payment;
-                    let paymentStatusLabel = 'Awaiting Payment';
-                    let paymentStatusColor = '#666';
-                    if (hasPaymentData) {
+                    const hasPaid = paidAmount > 0;
+                    let paymentStatusLabel = 'Not Paid';
+                    let paymentStatusColor = '#9b1c1c';
+                    if (hasPaid) {
                         const isFullyPaid = (match.paymentType === 'fully_paid') || (balanceAmount === 0 && paidAmount > 0) || (paidAmount > 0 && agreedAmount > 0 && paidAmount >= agreedAmount);
                         paymentStatusLabel = isFullyPaid ? 'Fully Paid' : '50% DP';
                         if (!isFullyPaid && balanceAmount > 0) {

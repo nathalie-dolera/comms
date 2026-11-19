@@ -19,7 +19,7 @@ module.exports = async (req, res) => {
       createdBy: session?.id || null,
       status: 'Pending'
     };
-    if (JSON.stringify(row).length > 1_500_000) return send(res, 413, { error: 'Submission is too large.' });
+    if (JSON.stringify(row).length > 4_500_000) return send(res, 413, { error: 'Submission is too large.' });
     const db = await getDb();
     await db.collection('appData').updateOne(
       { key: 'thalie_submissions' },

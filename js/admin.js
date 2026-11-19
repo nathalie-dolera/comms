@@ -584,8 +584,13 @@ function renderSubmissions() {
         const balAmt = matchedPayment ? (Number(matchedPayment.balance) || Math.max(0, agreedAmt - paidAmt)) : (Number(sub.balance) || Math.max(0, agreedAmt - paidAmt));
         const resolvedPaymentType = matchedPayment?.paymentType || sub.paymentType;
         const isFullyPaid = resolvedPaymentType === 'fully_paid' || (paidAmt > 0 && agreedAmt > 0 && paidAmt >= agreedAmt) || (paidAmt > 0 && balAmt === 0);
-        const paymentLabel = isFullyPaid ? 'Fully Paid' : '50% DP';
-        const badgeClass = isFullyPaid ? 'badge-fully-paid' : 'badge-downpayment';
+        const hasPayment = paidAmt > 0 || !!sub.downpaymentReceipt || (matchedPayment && (matchedPayment.status === 'Confirmed' || matchedPayment.status === 'Submitted'));
+        let paymentLabel = 'Not Paid';
+        let badgeClass = 'badge-unpaid';
+        if (hasPayment) {
+            paymentLabel = isFullyPaid ? 'Fully Paid' : '50% DP';
+            badgeClass = isFullyPaid ? 'badge-fully-paid' : 'badge-downpayment';
+        }
         const isPending = !sub.status || sub.status === 'Pending';
 
         return `
@@ -671,8 +676,13 @@ function viewSubmissionDetail(id) {
     const detBalAmt = detMatchedPay ? (Number(detMatchedPay.balance) || Math.max(0, detAgreedAmt - detPaidAmt)) : (Number(sub.balance) || Math.max(0, detAgreedAmt - detPaidAmt));
     const detResolvedType = detMatchedPay?.paymentType || sub.paymentType;
     const isFullyPaid = detResolvedType === 'fully_paid' || (detPaidAmt > 0 && detAgreedAmt > 0 && detPaidAmt >= detAgreedAmt) || (detPaidAmt > 0 && detBalAmt === 0);
-    const paymentLabel = isFullyPaid ? 'Fully Paid' : '50% DP';
-    const badgeClass = isFullyPaid ? 'badge-fully-paid' : 'badge-downpayment';
+    const detHasPayment = detPaidAmt > 0 || !!sub.downpaymentReceipt || (detMatchedPay && (detMatchedPay.status === 'Confirmed' || detMatchedPay.status === 'Submitted'));
+    let paymentLabel = 'Not Paid';
+    let badgeClass = 'badge-unpaid';
+    if (detHasPayment) {
+        paymentLabel = isFullyPaid ? 'Fully Paid' : '50% DP';
+        badgeClass = isFullyPaid ? 'badge-fully-paid' : 'badge-downpayment';
+    }
 
     container.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; border-bottom: 1px dashed #d4c4b0; padding-bottom: 10px;">
@@ -707,14 +717,44 @@ function viewSubmissionDetail(id) {
 
         ${Array.isArray(sub.referenceFiles) && sub.referenceFiles.length > 0 ? `
             <div class="admin-form-group">
-                <label style="color: var(--maroon); font-weight: bold;">Attached Files to be Commissioned (${sub.referenceFiles.length})</label>
-                <div class="modal-detail-box" style="display: flex; flex-direction: column; gap: 6px;">
-                    ${sub.referenceFiles.map(f => `
-                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: #fff; border: 1px solid #d4c4b0; border-radius: 4px; font-size: 12px;">
-                            <span style="font-weight: 600; color: #2a1010;">📄 ${escapeHtml(f.name || 'File')}</span>
-                            <span style="color: #777; font-size: 11px;">${escapeHtml(f.size || '')}</span>
+                <label style="color: var(--maroon); font-weight: bold; font-size: 13px;">
+                    Attached Documents &amp; Files (${sub.referenceFiles.length})
+                </label>
+                <div class="modal-detail-box" style="display: flex; flex-direction: column; gap: 8px; background: #faf4ee; padding: 12px; border: 1px dashed #d4c4b0; border-radius: 6px;">
+                    ${sub.referenceFiles.map((f, fIdx) => {
+                        const isImg = f.data && (f.data.startsWith('data:image/') || (f.type && f.type.startsWith('image/')));
+                        return `
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #ffffff; border: 1px solid #e0d0c0; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); flex-wrap: wrap; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
+                                ${isImg ? `
+                                    <img src="${f.data}" alt="${escapeHtml(f.name)}" style="width: 42px; height: 42px; object-fit: cover; border-radius: 4px; border: 1px solid #d4c4b0; cursor: pointer; flex-shrink: 0;" onclick="previewReferenceImage('${f.data}', '${escapeHtml(f.name)}')">
+                                ` : `
+                                    <span style="font-size: 24px; flex-shrink: 0;">📄</span>
+                                `}
+                                <div style="min-width: 0;">
+                                    <div style="font-weight: 700; color: #2a1010; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px;" title="${escapeHtml(f.name)}">
+                                        ${escapeHtml(f.name)}
+                                    </div>
+                                    <div style="color: #888; font-size: 11px;">
+                                        ${escapeHtml(f.size || '')} ${f.type ? '• ' + escapeHtml(f.type) : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                                ${f.data ? `
+                                    <a href="${f.data}" target="_blank" class="btn-action" style="padding: 5px 10px; font-size: 11px; text-decoration: none; background: #5a4a3a; color: #fff; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                                        👁 View
+                                    </a>
+                                    <a href="${f.data}" download="${escapeHtml(f.name)}" class="btn-action btn-primary" style="padding: 5px 10px; font-size: 11px; text-decoration: none; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                                        ⬇ Download
+                                    </a>
+                                ` : `
+                                    <span style="font-size: 11px; color: #999; font-style: italic;">Name on file</span>
+                                `}
+                            </div>
                         </div>
-                    `).join('')}
+                        `;
+                    }).join('')}
                 </div>
             </div>
         ` : ''}
@@ -3889,4 +3929,21 @@ function revokeClientAccount(id) {
 function escapeHtml(str) {
     if (!str) return '';
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function previewReferenceImage(src, name) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:100000;cursor:pointer;';
+    overlay.onclick = () => overlay.remove();
+    overlay.innerHTML = `
+        <div style="text-align:center; max-width:90%; max-height:90%;" onclick="event.stopPropagation()">
+            <div style="color:#fff; font-family:'Special Elite',monospace; font-size:15px; margin-bottom:10px;">${escapeHtml(name)}</div>
+            <img src="${src}" style="max-width:90vw; max-height:78vh; border-radius:6px; box-shadow:0 4px 20px rgba(0,0,0,0.5); border:1px solid #444; background:#fff; object-fit:contain;">
+            <div style="margin-top:12px; display:flex; gap:10px; justify-content:center;">
+                <a href="${src}" download="${escapeHtml(name)}" style="background:var(--maroon); color:#fff; padding:6px 14px; border-radius:4px; text-decoration:none; font-size:12px; font-family:'Special Elite',monospace;">⬇ Download</a>
+                <button onclick="this.closest('[style*=fixed]').remove()" style="background:#555; color:#fff; border:none; padding:6px 14px; border-radius:4px; cursor:pointer; font-size:12px; font-family:'Special Elite',monospace;">Close</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
 }
