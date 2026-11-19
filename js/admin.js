@@ -2427,6 +2427,10 @@ function renderPendingPaymentProofs() {
             </div>
         </div>`;
     }).join('');
+    } catch(e) {
+        console.error('Error loading QR codes:', e);
+        container.innerHTML = '<div style="grid-column:1/-1;padding:18px;text-align:center;color:#a94442;font-size:13px;">Error loading QR codes. Try refreshing the page.</div>';
+    }
 }
 
 function recordPaymentFromProof(proofId) {
@@ -3285,6 +3289,7 @@ function getPaymentQrsList() {
 function loadPaymentQrCodes() {
     const container = document.getElementById('payment-qrs-list');
     if (!container) return;
+    try {
     const list = getPaymentQrsList();
 
     if (list.length === 0) {
@@ -3296,13 +3301,15 @@ function loadPaymentQrCodes() {
         return;
     }
 
-    container.innerHTML = list.map((item, idx) => `
+    container.innerHTML = list.map((item, idx) => {
+        const safeMethod = escapeHtml(item.method);
+        return `
         <div style="background: #ffffff; border: 1px solid #dcd0c2; border-radius: 6px; padding: 14px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); position: relative;">
             <div style="font-family:'Special Elite', monospace; font-size: 14px; font-weight: bold; color: var(--maroon-dark); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
-                ${escapeHtml(item.method)}
+                ${safeMethod}
             </div>
-            <div style="width: 140px; height: 140px; border: 1px dashed #dcd0c2; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #faf4ee; margin-bottom: 12px; cursor: pointer;" onclick="previewQrImage('${escapeHtml(item.method)}', ${idx})" title="Click to view full size">
-                <img src="${item.image}" alt="${escapeHtml(item.method)} QR" style="max-width: 100%; max-height: 100%; object-fit: contain;" onerror="this.parentElement.innerHTML='<span style=\'color:#a94442;font-size:11px;text-align:center;\'>QR image failed to load. Try re-uploading.</span>';">
+            <div id="qr-img-wrap-${idx}" style="width: 140px; height: 140px; border: 1px dashed #dcd0c2; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #faf4ee; margin-bottom: 12px; cursor: pointer;" onclick="previewQrImage(${idx})" title="Click to view full size">
+                <img src="${item.image}" alt="${safeMethod} QR" style="max-width: 100%; max-height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend','<span style=&quot;color:#a94442;font-size:11px;text-align:center;&quot;>QR failed to load.<br>Re-upload below.</span>');">
             </div>
             <div style="display: flex; gap: 6px; width: 100%;">
                 <label style="flex:1; text-align:center; padding: 4px 8px; font-size: 11px; background:#5a4a3a; color:#fff; border-radius:4px; cursor:pointer; font-family:'Special Elite',monospace;">
@@ -3313,8 +3320,8 @@ function loadPaymentQrCodes() {
                     Delete QR
                 </button>
             </div>
-        </div>
-    `).join('');
+        </div>`;
+    }).join('');
 }
 
 async function handleSaveMultiPaymentQr() {
@@ -3360,19 +3367,29 @@ async function handleSaveMultiPaymentQr() {
     }
 }
 
-function previewQrImage(method, idx) {
+function previewQrImage(idx) {
     const list = getPaymentQrsList();
     if (!list[idx]) return;
+    const method = list[idx].method || 'Payment';
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:10000;cursor:pointer;';
     overlay.onclick = () => overlay.remove();
-    overlay.innerHTML = `
-        <div style="text-align:center;max-width:90%;max-height:90%;">
-            <div style="font-family:'Special Elite',monospace;font-size:18px;color:#fff;margin-bottom:12px;text-transform:uppercase;">${escapeHtml(method)} QR Code</div>
-            <img src="${list[idx].image}" alt="${escapeHtml(method)} QR" style="max-width:100%;max-height:80vh;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.5);">
-            <div style="color:#ccc;font-size:12px;margin-top:8px;">Click anywhere to close</div>
-        </div>
-    `;
+    const img = document.createElement('img');
+    img.src = list[idx].image;
+    img.alt = method + ' QR';
+    img.style.cssText = 'max-width:100%;max-height:80vh;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.5);';
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'text-align:center;max-width:90%;max-height:90%;';
+    const title = document.createElement('div');
+    title.style.cssText = 'font-family:Special Elite,monospace;font-size:18px;color:#fff;margin-bottom:12px;text-transform:uppercase;';
+    title.textContent = method + ' QR Code';
+    const hint = document.createElement('div');
+    hint.style.cssText = 'color:#ccc;font-size:12px;margin-top:8px;';
+    hint.textContent = 'Click anywhere to close';
+    wrapper.appendChild(title);
+    wrapper.appendChild(img);
+    wrapper.appendChild(hint);
+    overlay.appendChild(wrapper);
     document.body.appendChild(overlay);
 }
 
