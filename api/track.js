@@ -53,7 +53,8 @@ module.exports = async (req, res) => {
         balance: resolvedBalance,
         paymentType: resolvedPaymentType,
         payment: resolvedPayment,
-        description: submission.description || ''
+        description: submission.description || '',
+        adminNote: submission.adminNote || ''
       };
     });
 

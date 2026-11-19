@@ -648,6 +648,13 @@ function viewSubmissionDetail(id) {
         ` : ''}
 
         <div class="admin-form-group">
+            <label style="color: var(--maroon); font-weight: bold;">📋 Admin Status Note <small style="font-weight:400; color:#7a4e4e;">(visible to client on tracker)</small></label>
+            <div class="modal-detail-box" style="color: #444; font-style: ${sub.adminNote ? 'normal' : 'italic'}; min-height: 40px;">
+                ${sub.adminNote || '<span style="color:#aaa;">No status note added yet.</span>'}
+            </div>
+        </div>
+
+        <div class="admin-form-group">
             <label style="color: var(--maroon); font-weight: bold;">
                 GCash / Payment Proof Screenshot (${paymentLabel})
             </label>
@@ -668,11 +675,89 @@ function viewSubmissionDetail(id) {
                 <button class="btn-action" style="background:#2e7d32; color:#fff; font-weight:700;" onclick="acceptCommission('${sub.id}'); closeModal('modal-view-submission');">✓ Accept Commission</button>
             ` : ''}
             <button class="btn-action btn-secondary" onclick="recordPaymentFromCommission('${sub.id}')">+ Log Payment in Sheet</button>
+            <button class="btn-action" style="background:#5a4a3a; color:#fff;" onclick="editSubmissionFromView('${sub.id}')">✎ Edit Commission</button>
             <button class="btn-action btn-primary" onclick="closeModal('modal-view-submission')">Close</button>
         </div>
     `;
 
     openModal('modal-view-submission');
+}
+
+function editSubmissionFromView(id) {
+    const list = Storage.get(Storage.KEYS.SUBMISSIONS, []);
+    const sub = list.find(s => s.id === id);
+    if (!sub) return;
+
+    const container = document.getElementById('modal-sub-content');
+    const services = Storage.get(Storage.KEYS.SERVICES, []);
+    const serviceOptions = services.map(s => `<option value="${escapeHtml(s.name)}" ${sub.service === s.name ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('');
+
+    container.innerHTML = `
+        <div style="margin-bottom: 14px; background: #fdf6ee; border: 1px dashed #c9a98a; border-radius: 6px; padding: 12px 14px;">
+            <span style="font-size: 12px; color: #7a4e4e; font-family:'Special Elite',monospace; text-transform:uppercase;">Editing Commission for:</span>
+            <div style="font-weight: 700; font-size: 15px; color: var(--maroon-dark); font-family: 'Playfair Display', serif; margin-top: 2px;">${escapeHtml(sub.name)}</div>
+        </div>
+
+        <div class="admin-form-group">
+            <label>Status</label>
+            <select id="edit-sub-status">
+                <option value="Accepted" ${sub.status === 'Accepted' ? 'selected' : ''}>Accepted</option>
+                <option value="In Progress" ${sub.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                <option value="Done" ${sub.status === 'Done' ? 'selected' : ''}>Done</option>
+                <option value="Turned Over" ${sub.status === 'Turned Over' ? 'selected' : ''}>Turned Over</option>
+            </select>
+        </div>
+
+        <div class="admin-form-group">
+            <label>Service Type</label>
+            <input type="text" id="edit-sub-service" value="${escapeHtml(sub.service || '')}" placeholder="e.g. Digital Invitation">
+        </div>
+
+        <div class="admin-form-group">
+            <label>Target Deadline</label>
+            <input type="date" id="edit-sub-deadline" value="${sub.deadline || ''}">
+        </div>
+
+        <div class="admin-form-group">
+            <label>Project Description</label>
+            <textarea id="edit-sub-description" rows="3" style="width:100%; box-sizing:border-box;">${escapeHtml(sub.description || '')}</textarea>
+        </div>
+
+        <div class="admin-form-group">
+            <label>📋 Admin Status Note <small style="font-weight:400; color:#7a4e4e;">(visible to client on tracker)</small></label>
+            <textarea id="edit-sub-admin-note" rows="3" style="width:100%; box-sizing:border-box;" placeholder="e.g. Your design is currently being finalized. We will reach out soon for final review.">${escapeHtml(sub.adminNote || '')}</textarea>
+        </div>
+
+        <div style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;">
+            <button class="btn-action btn-secondary" onclick="viewSubmissionDetail('${sub.id}')">← Back</button>
+            <button class="btn-action btn-primary" onclick="saveSubmissionEdits('${sub.id}')">💾 Save Changes</button>
+        </div>
+    `;
+    document.getElementById('modal-sub-id').textContent = 'Edit Commission';
+}
+
+function saveSubmissionEdits(id) {
+    const list = Storage.get(Storage.KEYS.SUBMISSIONS, []);
+    const idx = list.findIndex(s => s.id === id);
+    if (idx === -1) return;
+
+    const newStatus = document.getElementById('edit-sub-status')?.value || list[idx].status;
+    const newService = document.getElementById('edit-sub-service')?.value.trim() || list[idx].service;
+    const newDeadline = document.getElementById('edit-sub-deadline')?.value || list[idx].deadline;
+    const newDescription = document.getElementById('edit-sub-description')?.value.trim() || list[idx].description;
+    const newAdminNote = document.getElementById('edit-sub-admin-note')?.value.trim() || '';
+
+    list[idx].status = newStatus;
+    list[idx].service = newService;
+    list[idx].deadline = newDeadline;
+    list[idx].description = newDescription;
+    list[idx].adminNote = newAdminNote;
+
+    Storage.set(Storage.KEYS.SUBMISSIONS, list);
+    showToast('Commission updated successfully!');
+    renderSubmissions();
+    renderCalendar();
+    viewSubmissionDetail(id); // return to view mode showing updated data
 }
 
 function deleteSubmission(id) {
