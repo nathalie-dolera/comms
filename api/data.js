@@ -48,8 +48,9 @@ module.exports = async (req, res) => {
         }).sort({ createdAt: -1 }).toArray();
         data.thalie_admin_users = users.map(user => ({
           id: String(user._id), username: user.username, accountName: user.accountName,
-          name: user.accountName, avatar: user.avatar || '', createdAt: user.createdAt,
+          name: user.accountName, createdAt: user.createdAt,
           approvalStatus: user.status, paid: user.paid === true, paymentStatus: user.paid ? 'paid' : 'not_paid'
+          // avatar omitted from list view to keep payload small
         }));
       }
       // Strip large base64 QR images from site_settings for non-admin requests

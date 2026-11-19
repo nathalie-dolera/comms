@@ -41,11 +41,25 @@ const Storage = {
             ];
             const toSave = {};
             for (const k of publicKeys) {
-                if (this.cache[k] !== undefined) toSave[k] = this.cache[k];
+                if (this.cache[k] !== undefined) {
+                    // Strip large base64 image arrays from local cache to avoid quota errors
+                    if (k === this.KEYS.SITE_SETTINGS && this.cache[k]) {
+                        const s = { ...this.cache[k] };
+                        if (Array.isArray(s.paymentQrs)) s.paymentQrs = s.paymentQrs.map(q => ({ id: q.id, method: q.method }));
+                        delete s.paymentQrCode;
+                        toSave[k] = s;
+                    } else {
+                        toSave[k] = this.cache[k];
+                    }
+                }
             }
-            localStorage.setItem('thalie_public_cache', JSON.stringify(toSave));
+            const serialized = JSON.stringify(toSave);
+            if (serialized.length < 4_500_000) {
+                localStorage.setItem('thalie_public_cache', serialized);
+            }
         } catch (e) {
             console.warn('Could not save local cache:', e);
+            try { localStorage.removeItem('thalie_public_cache'); } catch {}
         }
     },
 

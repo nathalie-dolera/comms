@@ -222,6 +222,8 @@ async function handleLoginSubmit(event) {
     const errorEl = document.getElementById('login-error-msg');
 
     try {
+        // Clear any stale/oversized localStorage cache before login refresh
+        try { localStorage.removeItem('thalie_public_cache'); } catch {}
         const user = await Storage.login(accountNameInput, passwordInput);
         if (errorEl) errorEl.style.display = 'none';
         checkAuth();
