@@ -52,6 +52,17 @@ module.exports = async (req, res) => {
           approvalStatus: user.status, paid: user.paid === true, paymentStatus: user.paid ? 'paid' : 'not_paid'
         }));
       }
+      // Strip large base64 QR images from site_settings for non-admin requests
+      // to keep the public payload small and prevent timeout on page load/refresh
+      if (session?.role !== 'admin' && data.thalie_site_settings) {
+        const settings = { ...data.thalie_site_settings };
+        if (Array.isArray(settings.paymentQrs)) {
+          // Keep method names only, strip base64 image data
+          settings.paymentQrs = settings.paymentQrs.map(q => ({ id: q.id, method: q.method }));
+        }
+        delete settings.paymentQrCode; // legacy single QR field
+        data.thalie_site_settings = settings;
+      }
       return send(res, 200, { data, user: session });
     }
     if (!method(req, res, 'PUT')) return;
