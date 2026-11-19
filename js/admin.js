@@ -966,7 +966,7 @@ function _oldViewSubmissionDetail(id) {
         <div class="admin-form-group">
             <label style="color: var(--maroon); font-weight: bold;">Requested Service</label>
             <div class="modal-detail-box">
-                ${sub.service} <span style="font-size: 12px; color: #7a4e4e; font-weight: normal;">(${sub.category || 'General Service'})</span>
+                ${escapeHtml(sub.service || 'General Commission')}
             </div>
         </div>
 
@@ -1004,11 +1004,8 @@ function _oldViewSubmissionDetail(id) {
                             </div>
                             <div style="display: flex; gap: 6px; align-items: center;">
                                 ${f.data ? `
-                                    <a href="${f.data}" target="_blank" class="btn-action" style="padding: 5px 10px; font-size: 11px; text-decoration: none; background: #5a4a3a; color: #fff; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
-                                        👁 View
-                                    </a>
                                     <a href="${f.data}" download="${escapeHtml(f.name)}" class="btn-action btn-primary" style="padding: 5px 10px; font-size: 11px; text-decoration: none; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
-                                        ⬇ Download
+                                        Download
                                     </a>
                                 ` : `
                                     <span style="font-size: 11px; color: #999; font-style: italic;">Name on file</span>
@@ -4202,7 +4199,7 @@ function previewReferenceImage(src, name) {
             <div style="color:#fff; font-family:'Special Elite',monospace; font-size:15px; margin-bottom:10px;">${escapeHtml(name)}</div>
             <img src="${src}" style="max-width:90vw; max-height:78vh; border-radius:6px; box-shadow:0 4px 20px rgba(0,0,0,0.5); border:1px solid #444; background:#fff; object-fit:contain;">
             <div style="margin-top:12px; display:flex; gap:10px; justify-content:center;">
-                <a href="${src}" download="${escapeHtml(name)}" style="background:var(--maroon); color:#fff; padding:6px 14px; border-radius:4px; text-decoration:none; font-size:12px; font-family:'Special Elite',monospace;">⬇ Download</a>
+                <a href="${src}" download="${escapeHtml(name)}" style="background:var(--maroon); color:#fff; padding:6px 14px; border-radius:4px; text-decoration:none; font-size:12px; font-family:'Special Elite',monospace;">Download</a>
                 <button onclick="this.closest('[style*=fixed]').remove()" style="background:#555; color:#fff; border:none; padding:6px 14px; border-radius:4px; cursor:pointer; font-size:12px; font-family:'Special Elite',monospace;">Close</button>
             </div>
         </div>
