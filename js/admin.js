@@ -705,6 +705,20 @@ function viewSubmissionDetail(id) {
             </div>
         </div>
 
+        ${Array.isArray(sub.referenceFiles) && sub.referenceFiles.length > 0 ? `
+            <div class="admin-form-group">
+                <label style="color: var(--maroon); font-weight: bold;">Attached Files to be Commissioned (${sub.referenceFiles.length})</label>
+                <div class="modal-detail-box" style="display: flex; flex-direction: column; gap: 6px;">
+                    ${sub.referenceFiles.map(f => `
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: #fff; border: 1px solid #d4c4b0; border-radius: 4px; font-size: 12px;">
+                            <span style="font-weight: 600; color: #2a1010;">📄 ${escapeHtml(f.name || 'File')}</span>
+                            <span style="color: #777; font-size: 11px;">${escapeHtml(f.size || '')}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        ` : ''}
+
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
             <div>
                 <label style="color: var(--maroon); font-size: 11px; text-transform: uppercase; font-family:'Special Elite', monospace; font-weight: bold; display: block; margin-bottom: 6px;">Target Deadline</label>

@@ -163,7 +163,7 @@
                                 <span style="font-size: 22px;">📁</span><br>
                                 Click, drag &amp; drop, or paste files here
                             </div>
-                            <div style="font-size: 11px; color: #b08070; margin-top: 4px; pointer-events: none;">Accepts images, PDFs, documents, slides</div>
+                            <div style="font-size: 11px; color: #b08070; margin-top: 4px; pointer-events: none;">Attach as many files as you want (images, PDFs, documents, slides)</div>
                         </div>
                         <div id="commission-files-preview" style="margin-top: 8px; font-size: 12px; color: var(--maroon); font-family: 'Special Elite', monospace;"></div>
                     </div>
@@ -538,6 +538,14 @@
                 document.getElementById('editing-comm-id').value = comm.id || '';
                 const agreedEl = document.getElementById('agreed-price');
                 if (agreedEl && comm.agreedPrice) agreedEl.value = comm.agreedPrice;
+
+                if (Array.isArray(comm.referenceFiles) && comm.referenceFiles.length > 0) {
+                    uploadedCommissionFiles = [...comm.referenceFiles];
+                    renderCommissionFilesPreview();
+                } else {
+                    uploadedCommissionFiles = [];
+                    renderCommissionFilesPreview();
+                }
 
                 const submitBtn = document.getElementById('comm-submit-btn');
                 const lockedStatuses = ['In Progress', 'Done', 'Turned Over'];
@@ -981,27 +989,67 @@
             select.innerHTML = html;
         }
 
-        function handleCommissionFilesUpload(event) {
-            const files = event.target.files;
+        function renderCommissionFilesPreview() {
             const previewEl = document.getElementById('commission-files-preview');
-            uploadedCommissionFiles = [];
-            if (!files || files.length === 0) {
-                if (previewEl) previewEl.innerHTML = '';
+            if (!previewEl) return;
+            if (!uploadedCommissionFiles || uploadedCommissionFiles.length === 0) {
+                previewEl.innerHTML = '';
                 return;
             }
 
-            const names = Array.from(files).map(f => {
-                uploadedCommissionFiles.push({
-                    name: f.name,
-                    size: (f.size / 1024).toFixed(1) + ' KB',
-                    type: f.type || 'Document'
-                });
-                return f.name;
+            let html = `
+                <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
+                    <div style="font-weight: bold; font-size: 12px; color: var(--maroon); margin-bottom: 2px;">
+                        Attached Files (${uploadedCommissionFiles.length}):
+                    </div>
+            `;
+
+            uploadedCommissionFiles.forEach((file, idx) => {
+                html += `
+                    <div style="display: flex; align-items: center; justify-content: space-between; background: #fff8f5; border: 1px solid var(--rose); border-radius: 4px; padding: 6px 10px; font-size: 12px; font-family: 'Poppins', sans-serif;">
+                        <div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1;">
+                            <span style="font-size: 16px;">📄</span>
+                            <span style="font-weight: 600; color: #3a1515; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</span>
+                            <span style="color: #888; font-size: 11px; flex-shrink: 0;">(${escapeHtml(file.size)})</span>
+                        </div>
+                        <button type="button" onclick="removeCommissionFile(${idx})" style="background: none; border: none; color: #b02a37; font-weight: bold; font-size: 16px; cursor: pointer; padding: 0 4px; margin-left: 8px; line-height: 1;" title="Remove this file">&times;</button>
+                    </div>
+                `;
             });
 
-            if (previewEl) {
-                previewEl.innerHTML = `Attached ${names.length} file(s): ` + names.join(', ');
+            html += `</div>`;
+            previewEl.innerHTML = html;
+        }
+
+        function removeCommissionFile(index) {
+            if (index >= 0 && index < uploadedCommissionFiles.length) {
+                uploadedCommissionFiles.splice(index, 1);
+                renderCommissionFilesPreview();
             }
+        }
+
+        function handleCommissionFilesUpload(event) {
+            const files = event.target ? event.target.files : event.files;
+            if (!files || files.length === 0) return;
+
+            Array.from(files).forEach(f => {
+                const formattedSize = f.size ? (f.size / 1024).toFixed(1) + ' KB' : 'Unknown size';
+                // Avoid adding exact duplicate file name & size
+                const exists = uploadedCommissionFiles.some(existing => existing.name === f.name && existing.size === formattedSize);
+                if (!exists) {
+                    uploadedCommissionFiles.push({
+                        name: f.name,
+                        size: formattedSize,
+                        type: f.type || 'Document'
+                    });
+                }
+            });
+
+            // Reset file input so user can click to add another file immediately
+            const inputEl = document.getElementById('commission-files');
+            if (inputEl) inputEl.value = '';
+
+            renderCommissionFilesPreview();
         }
 
         // ============================================
