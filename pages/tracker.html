@@ -296,7 +296,7 @@
         }
 
         .pill-deadline {
-            background: #2563eb;
+            background: #dc2626;
             color: #ffffff;
             font-weight: 600;
         }
@@ -375,8 +375,8 @@
             <div class="calendar-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px dotted var(--rose); padding-bottom: 12px; flex-wrap: wrap; gap: 10px;">
                     <div>
-                        <h2>Availability Calendar</h2>
-                        <p style="font-size: 13px; color: #666; margin: 4px 0 0 0; font-family: 'Poppins', sans-serif;">Check open commission slots and upcoming booking deadlines</p>
+                        <h2>Commissioner Calendar</h2>
+                        
                     </div>
                     <div style="display:flex; align-items: center; gap: 10px;">
                         <button onclick="clientChangeMonth(-1)" style="padding: 6px 12px; cursor: pointer; background: var(--maroon); color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 14px;">&lt;</button>
@@ -385,7 +385,7 @@
                     </div>
                 </div>
                 <div style="display: flex; gap: 18px; margin-bottom: 14px; font-size: 12px; font-family: 'Poppins', sans-serif; align-items: center; flex-wrap: wrap;">
-                    <span style="color: #1e40af; font-weight: 600;">● All blue dates are not available for booking</span>
+                    <span style="color: #1e40af; font-weight: 600;">● All blue dates commissioner is not available</span>
                 </div>
                 <div class="client-calendar-grid" id="client-calendar-grid">
                     <!-- Injected via JS -->
@@ -488,7 +488,7 @@
                     let paymentStatusLabel = 'N/A';
                     let paymentStatusColor = '#666';
                     if (paidAmount > 0 || match.paymentType) {
-                        const isFullyPaid = (match.paymentType === 'fully_paid') || (balanceAmount === 0 && paidAmount > 0);
+                        const isFullyPaid = (match.paymentType === 'fully_paid') || (balanceAmount === 0 && paidAmount > 0) || (paidAmount > 0 && agreedAmount > 0 && paidAmount >= agreedAmount);
                         paymentStatusLabel = isFullyPaid ? 'Fully Paid' : '50% DP';
                         if (!isFullyPaid && balanceAmount > 0) {
                             paymentStatusLabel += ` (Balance: ₱${balanceAmount.toLocaleString()})`;

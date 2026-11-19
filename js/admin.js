@@ -484,7 +484,10 @@ function renderSubmissions() {
     }
 
     tbody.innerHTML = submissions.map(sub => {
-        const isFullyPaid = sub.paymentType === 'fully_paid';
+        const paidAmt = Number(sub.amountPaid) || 0;
+        const agreedAmt = Number(sub.agreedPrice) || 0;
+        const balAmt = Number(sub.balance) || Math.max(0, agreedAmt - paidAmt);
+        const isFullyPaid = sub.paymentType === 'fully_paid' || (paidAmt > 0 && agreedAmt > 0 && paidAmt >= agreedAmt) || (paidAmt > 0 && balAmt === 0);
         const paymentLabel = isFullyPaid ? 'Fully Paid' : '50% DP';
         const badgeClass = isFullyPaid ? 'badge-fully-paid' : 'badge-downpayment';
         const isPending = !sub.status || sub.status === 'Pending';
@@ -560,7 +563,10 @@ function viewSubmissionDetail(id) {
     document.getElementById('modal-sub-id').textContent = 'Commission Details';
     const container = document.getElementById('modal-sub-content');
 
-    const isFullyPaid = sub.paymentType === 'fully_paid';
+    const detPaidAmt = Number(sub.amountPaid) || 0;
+    const detAgreedAmt = Number(sub.agreedPrice) || 0;
+    const detBalAmt = Number(sub.balance) || Math.max(0, detAgreedAmt - detPaidAmt);
+    const isFullyPaid = sub.paymentType === 'fully_paid' || (detPaidAmt > 0 && detAgreedAmt > 0 && detPaidAmt >= detAgreedAmt) || (detPaidAmt > 0 && detBalAmt === 0);
     const paymentLabel = isFullyPaid ? 'Fully Paid' : '50% DP';
     const badgeClass = isFullyPaid ? 'badge-fully-paid' : 'badge-downpayment';
 
@@ -2753,10 +2759,10 @@ function renderPaymentSheet() {
     tbody.innerHTML = list.map((p, index) => {
         const amt = parseFloat(p.amount) || 0;
         runningTotal += amt;
-        const isDP = p.paymentType === 'downpayment';
         const agreed = parseFloat(p.agreedPrice) || (p.paymentType === 'fully_paid' ? amt : amt * 2);
         const bal = Math.max(0, agreed - amt);
         const pct = agreed > 0 ? Math.round((amt / agreed) * 100) : 100;
+        const isDP = p.paymentType === 'downpayment' && !(amt > 0 && agreed > 0 && amt >= agreed) && !(amt > 0 && bal === 0);
 
         const typeBadge = isDP 
             ? `<span style="background: #fdf3e7; color: #b7791f; border: 1px solid #f6e05e; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">50% DP</span>`
