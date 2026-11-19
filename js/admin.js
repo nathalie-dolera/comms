@@ -760,16 +760,14 @@ function renderCommissionViewTab(sub) {
                         ${escapeHtml(sub.name)}
                     </h1>
                 </div>
-                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                    <span class="status-pill ${getStatusPillClass(sub.status)}" style="font-size: 13px; padding: 6px 14px;">
-                        ${sub.status || 'Pending'}
-                    </span>
-                    <select onchange="updateSubmissionStatus('${sub.id}', this.value); switchToViewCommissionTab('${sub.id}');" class="btn-status-select" style="padding: 6px 10px; font-size: 12px;">
-                        <option value="Accepted" ${sub.status === 'Accepted' ? 'selected' : ''}>Set: Accepted</option>
-                        <option value="In Progress" ${sub.status === 'In Progress' ? 'selected' : ''}>Set: In Progress</option>
-                        <option value="Done" ${sub.status === 'Done' ? 'selected' : ''}>Set: Done</option>
-                        <option value="Turned Over" ${sub.status === 'Turned Over' ? 'selected' : ''}>Set: Turned Over</option>
-                        <option value="Declined" ${sub.status === 'Declined' ? 'selected' : ''}>Set: Declined</option>
+                <div>
+                    <select class="btn-status-select ${getStatusPillClass(sub.status)}" onchange="updateSubmissionStatus('${sub.id}', this.value); switchToViewCommissionTab('${sub.id}');" style="font-size: 13px; padding: 6px 14px; border-radius: 12px; font-weight: bold; cursor: pointer;">
+                        <option value="Pending" ${(!sub.status || sub.status === 'Pending') ? 'selected' : ''}>Pending</option>
+                        <option value="Accepted" ${sub.status === 'Accepted' ? 'selected' : ''}>Accepted</option>
+                        <option value="In Progress" ${sub.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                        <option value="Done" ${sub.status === 'Done' ? 'selected' : ''}>Done</option>
+                        <option value="Turned Over" ${sub.status === 'Turned Over' ? 'selected' : ''}>Turned Over</option>
+                        <option value="Declined" ${sub.status === 'Declined' ? 'selected' : ''}>Declined</option>
                     </select>
                 </div>
             </div>
@@ -779,7 +777,6 @@ function renderCommissionViewTab(sub) {
                 <div style="background: #faf4ee; padding: 12px 14px; border-radius: 6px; border: 1px solid #e2d2c2;">
                     <span style="font-size: 11px; text-transform: uppercase; font-family:'Special Elite', monospace; color: var(--maroon); font-weight: bold; display: block; margin-bottom: 4px;">Service</span>
                     <div style="font-weight: 700; color: #2a1010; font-size: 14px;">${escapeHtml(sub.service || 'General Commission')}</div>
-                    <div style="font-size: 11px; color: #777; margin-top: 2px;">${escapeHtml(sub.category || 'Client Request')}</div>
                 </div>
 
                 <div style="background: #faf4ee; padding: 12px 14px; border-radius: 6px; border: 1px solid #e2d2c2;">
@@ -822,7 +819,7 @@ function renderCommissionViewTab(sub) {
             <div style="margin-bottom: 24px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
                     <label style="color: var(--maroon); font-weight: bold; font-family:'Special Elite', monospace; text-transform: uppercase; font-size: 14px;">
-                        📁 Attached Documents &amp; Files (${refFiles.length})
+                        Attached Documents &amp; Files (${refFiles.length})
                     </label>
                     <label class="btn-action btn-secondary" style="padding: 5px 12px; font-size: 11.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-family:'Special Elite', monospace;">
                         + Attach File to this Commission
@@ -847,9 +844,9 @@ function renderCommissionViewTab(sub) {
                                             <img src="${f.data}" alt="${escapeHtml(f.name)}" style="max-width: 100%; max-height: 100%; object-fit: contain;">
                                         </div>
                                     ` : `
-                                        <div style="width: 100%; height: 100px; border-radius: 6px; background: #faf4ee; border: 1px dashed #dcd0c2; margin-bottom: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; ${f.data ? 'cursor: pointer;' : ''}" ${f.data ? `onclick="window.open('${f.data}', '_blank')"` : ''}>
-                                            <span style="font-size: 36px;">${isPdf ? '📕' : '📄'}</span>
-                                            <span style="font-size: 11px; color: #8c5b52; font-family:'Special Elite',monospace; margin-top: 4px;">${isPdf ? 'PDF Document' : 'Document'}</span>
+                                        <div style="width: 100%; height: 90px; border-radius: 6px; background: #faf4ee; border: 1px dashed #dcd0c2; margin-bottom: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; ${f.data ? 'cursor: pointer;' : ''}" ${f.data ? `onclick="window.open('${f.data}', '_blank')"` : ''} title="${f.data ? 'Click to open file' : ''}">
+                                            <span style="font-size: 12px; font-weight: bold; color: var(--maroon); border: 1px solid #dcd0c2; background: #fff; padding: 4px 10px; border-radius: 4px; font-family:'Special Elite', monospace;">${isPdf ? 'PDF' : 'DOCUMENT'}</span>
+                                            <span style="font-size: 11px; color: #8c5b52; font-family:'Special Elite',monospace; margin-top: 6px;">${f.data ? 'Click to open' : ''}</span>
                                         </div>
                                     `}
                                     <div style="font-weight: 700; font-size: 13.5px; color: var(--maroon-dark); word-break: break-all; margin-bottom: 4px; font-family: 'Poppins', sans-serif;">
@@ -867,11 +864,8 @@ function renderCommissionViewTab(sub) {
                                 </div>
                                 <div style="display: flex; gap: 8px; padding-top: 10px; border-top: 1px solid #f0e6dc; align-items: center;">
                                     ${f.data ? `
-                                        <a href="${f.data}" target="_blank" class="btn-action" style="flex: 1; text-align: center; text-decoration: none; padding: 8px; font-size: 12px; background: #5a4a3a; color: #fff; border-radius: 4px; font-family:'Special Elite', monospace;">
-                                            👁 Open / View
-                                        </a>
                                         <a href="${f.data}" download="${escapeHtml(f.name)}" class="btn-action btn-primary" style="flex: 1; text-align: center; text-decoration: none; padding: 8px; font-size: 12px; border-radius: 4px; font-family:'Special Elite', monospace;">
-                                            ⬇ Download
+                                            Download
                                         </a>
                                     ` : `
                                         <span style="font-size: 11px; color: #9c4221; font-style: italic; width: 100%; text-align: center; padding: 4px; background: #fff5f0; border-radius: 4px;">
