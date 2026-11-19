@@ -341,7 +341,7 @@ function initNavigation() {
             if (tabName === 'services') renderServicesList();
             if (tabName === 'calendar') renderCalendar();
             if (tabName === 'submissions') renderSubmissions();
-            if (tabName === 'payments') renderPaymentsTracker();
+            if (tabName === 'payments') { renderPaymentsTracker(); loadPaymentQrCodes(); }
             if (tabName === 'feedback') renderFeedbacks();
             if (tabName === 'output') renderOutputs();
             if (tabName === 'accounts') {
@@ -2421,6 +2421,7 @@ function renderPaymentsTracker() {
     populatePaymentMonthFilter(payments);
     renderPaymentSheet();
     renderPendingPaymentProofs();
+    loadPaymentQrCodes();
     updateBadges();
 }
 
@@ -3304,21 +3305,11 @@ function toggleCustomQrMethod(val) {
     }
 }
 
-function getPaymentQrsList() {
-    const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, {}) || {};
-    let list = Array.isArray(settings.paymentQrs) ? settings.paymentQrs : [];
-    if (list.length === 0 && settings.paymentQrCode) {
-        list = [{ id: 'qr-default', method: 'GCash', image: settings.paymentQrCode }];
-    }
-    return list;
-}
+let adminCachedQrs = null;
 
-function loadPaymentQrCodes() {
-    const container = document.getElementById('payment-qrs-list');
+function renderQrListHtml(container, list) {
     if (!container) return;
-    const list = getPaymentQrsList();
-
-    if (list.length === 0) {
+    if (!list || list.length === 0) {
         container.innerHTML = `
             <div style="grid-column: 1 / -1; padding: 24px; text-align: center; color: #8c5b52; background: #fff; border: 1px dashed var(--rose); border-radius: 6px; font-family:'Special Elite', monospace; font-size: 13px;">
                 No payment QR codes added yet. Add QR codes below for GCash, Maya, Bank Transfer, etc.!
@@ -3329,25 +3320,63 @@ function loadPaymentQrCodes() {
 
     container.innerHTML = list.map((item, idx) => {
         const safeMethod = escapeHtml(item.method);
+        const hasImg = !!item.image;
         return `
         <div style="background: #ffffff; border: 1px solid #dcd0c2; border-radius: 6px; padding: 14px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); position: relative;">
             <div style="font-family:'Special Elite', monospace; font-size: 14px; font-weight: bold; color: var(--maroon-dark); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
                 ${safeMethod}
             </div>
             <div id="qr-img-wrap-${idx}" style="width: 140px; height: 140px; border: 1px dashed #dcd0c2; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #faf4ee; margin-bottom: 12px; cursor: pointer;" onclick="previewQrImage(${idx})" title="Click to view full size">
-                <img src="${item.image}" alt="${safeMethod} QR" style="max-width: 100%; max-height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend','<span style=&quot;color:#a94442;font-size:11px;text-align:center;&quot;>QR failed to load.<br>Re-upload below.</span>');">
+                ${hasImg ? `<img src="${item.image}" alt="${safeMethod} QR" style="max-width: 100%; max-height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend','<span style=&quot;color:#a94442;font-size:11px;text-align:center;&quot;>QR failed to load.<br>Click Replace below.</span>');">` : `<span style="color:#8c5b52;font-size:11px;text-align:center;font-family:'Special Elite',monospace;">No image uploaded.<br>Click Replace below.</span>`}
             </div>
             <div style="display: flex; gap: 6px; width: 100%;">
-                <label style="flex:1; text-align:center; padding: 4px 8px; font-size: 11px; background:#5a4a3a; color:#fff; border-radius:4px; cursor:pointer; font-family:'Special Elite',monospace;">
+                <label style="flex:1; text-align:center; padding: 6px 8px; font-size: 11px; background:#5a4a3a; color:#fff; border-radius:4px; cursor:pointer; font-family:'Special Elite',monospace;">
                     Replace
                     <input type="file" accept="image/*" onchange="replaceQrImage(${idx}, this)" style="display:none;">
                 </label>
-                <button type="button" class="btn-action btn-danger" onclick="deleteMultiPaymentQr(${idx})" style="flex:1; padding: 4px 8px; font-size: 11px;">
+                <button type="button" class="btn-action btn-danger" onclick="deleteMultiPaymentQr(${idx})" style="flex:1; padding: 6px 8px; font-size: 11px;">
                     Delete QR
                 </button>
             </div>
         </div>`;
     }).join('');
+}
+
+function getPaymentQrsList() {
+    if (adminCachedQrs && Array.isArray(adminCachedQrs)) return adminCachedQrs;
+    const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, {}) || {};
+    let list = Array.isArray(settings.paymentQrs) ? settings.paymentQrs : [];
+    if (list.length === 0 && settings.paymentQrCode) {
+        list = [{ id: 'qr-default', method: 'GCash', image: settings.paymentQrCode }];
+    }
+    return list;
+}
+
+async function loadPaymentQrCodes() {
+    const container = document.getElementById('payment-qrs-list');
+    if (!container) return;
+
+    // Show currently cached/rendered QRs if any
+    const list = getPaymentQrsList();
+    if (list && list.length > 0) {
+        renderQrListHtml(container, list);
+    }
+
+    // Fetch directly from server endpoint /api/admin-qr
+    try {
+        const res = await Storage.request('/api/admin-qr');
+        if (res && Array.isArray(res.paymentQrs)) {
+            adminCachedQrs = res.paymentQrs;
+            renderQrListHtml(container, adminCachedQrs);
+            return;
+        }
+    } catch (err) {
+        console.warn('Could not load /api/admin-qr:', err);
+    }
+
+    if (!list || list.length === 0) {
+        renderQrListHtml(container, []);
+    }
 }
 
 async function handleSaveMultiPaymentQr() {
@@ -3366,9 +3395,17 @@ async function handleSaveMultiPaymentQr() {
     }
 
     try {
+        showToast('Compressing and saving QR code...');
         const optimizedImage = await compressImageFile(file, 800, 0.85);
-        const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, {}) || {};
-        const list = getPaymentQrsList();
+
+        // Fetch fresh list from server first
+        let list = [];
+        try {
+            const res = await Storage.request('/api/admin-qr');
+            if (res && Array.isArray(res.paymentQrs)) list = res.paymentQrs;
+        } catch {
+            list = getPaymentQrsList();
+        }
 
         const existingIdx = list.findIndex(q => q.method.toLowerCase() === method.toLowerCase());
         if (existingIdx !== -1) {
@@ -3377,40 +3414,48 @@ async function handleSaveMultiPaymentQr() {
             list.push({ id: 'qr-' + Date.now(), method, image: optimizedImage });
         }
 
-        settings.paymentQrs = list;
-        if (list[0]) settings.paymentQrCode = list[0].image;
+        // Save directly via /api/admin-qr
+        const saveRes = await Storage.request('/api/admin-qr', {
+            method: 'PUT',
+            body: JSON.stringify({ paymentQrs: list })
+        });
 
-        Storage.set(Storage.KEYS.SITE_SETTINGS, settings);
+        if (!saveRes.ok && saveRes.error) {
+            throw new Error(saveRes.error);
+        }
+
+        adminCachedQrs = list;
         if (fileInput) fileInput.value = '';
         if (customMethodInput) customMethodInput.value = '';
         if (methodSelect) methodSelect.value = 'GCash';
         toggleCustomQrMethod('GCash');
 
-        showToast(`QR Code for "${method}" saved!`);
-        loadPaymentQrCodes();
+        showToast(`QR Code for "${method}" saved successfully!`);
+        const container = document.getElementById('payment-qrs-list');
+        renderQrListHtml(container, list);
     } catch (err) {
         alert('Could not save QR code: ' + err.message);
     }
 }
 
 function previewQrImage(idx) {
-    const list = getPaymentQrsList();
-    if (!list[idx]) return;
+    const list = adminCachedQrs || getPaymentQrsList();
+    if (!list[idx] || !list[idx].image) return;
     const method = list[idx].method || 'Payment';
     const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:10000;cursor:pointer;';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:10000;cursor:pointer;';
     overlay.onclick = () => overlay.remove();
     const img = document.createElement('img');
     img.src = list[idx].image;
     img.alt = method + ' QR';
-    img.style.cssText = 'max-width:100%;max-height:80vh;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.5);';
+    img.style.cssText = 'max-width:90%;max-height:80vh;border-radius:8px;box-shadow:0 4px 25px rgba(0,0,0,0.6);background:#fff;padding:8px;';
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'text-align:center;max-width:90%;max-height:90%;';
     const title = document.createElement('div');
-    title.style.cssText = 'font-family:Special Elite,monospace;font-size:18px;color:#fff;margin-bottom:12px;text-transform:uppercase;';
+    title.style.cssText = 'font-family:Special Elite,monospace;font-size:18px;color:#fff;margin-bottom:12px;text-transform:uppercase;letter-spacing:1px;';
     title.textContent = method + ' QR Code';
     const hint = document.createElement('div');
-    hint.style.cssText = 'color:#ccc;font-size:12px;margin-top:8px;';
+    hint.style.cssText = 'color:#ccc;font-size:12px;margin-top:10px;font-family:sans-serif;';
     hint.textContent = 'Click anywhere to close';
     wrapper.appendChild(title);
     wrapper.appendChild(img);
@@ -3423,33 +3468,59 @@ async function replaceQrImage(idx, input) {
     const file = input.files && input.files[0];
     if (!file) return;
     try {
+        showToast('Replacing QR code image...');
         const optimizedImage = await compressImageFile(file, 800, 0.85);
-        const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, {}) || {};
-        const list = getPaymentQrsList();
+
+        let list = adminCachedQrs || [];
+        if (list.length === 0) {
+            try {
+                const res = await Storage.request('/api/admin-qr');
+                if (res && Array.isArray(res.paymentQrs)) list = res.paymentQrs;
+            } catch {
+                list = getPaymentQrsList();
+            }
+        }
+
         if (!list[idx]) return;
         list[idx].image = optimizedImage;
-        settings.paymentQrs = list;
-        if (idx === 0) settings.paymentQrCode = optimizedImage;
-        Storage.set(Storage.KEYS.SITE_SETTINGS, settings);
+
+        await Storage.request('/api/admin-qr', {
+            method: 'PUT',
+            body: JSON.stringify({ paymentQrs: list })
+        });
+
+        adminCachedQrs = list;
         input.value = '';
         showToast(`QR Code for "${list[idx].method}" replaced!`);
-        loadPaymentQrCodes();
+        const container = document.getElementById('payment-qrs-list');
+        renderQrListHtml(container, list);
     } catch (err) {
         alert('Could not replace QR code: ' + err.message);
     }
 }
 
-function deleteMultiPaymentQr(idx) {
-    if (!confirm('Remove this payment QR code?')) return;
-    const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, {}) || {};
-    const list = getPaymentQrsList();
-    list.splice(idx, 1);
-    settings.paymentQrs = list;
-    if (list[0]) settings.paymentQrCode = list[0].image;
-    else delete settings.paymentQrCode;
-    Storage.set(Storage.KEYS.SITE_SETTINGS, settings);
-    showToast('Payment QR code removed.');
-    loadPaymentQrCodes();
+async function deleteMultiPaymentQr(idx) {
+    let list = adminCachedQrs || [];
+    if (!list[idx]) {
+        list = getPaymentQrsList();
+    }
+    const methodName = list[idx]?.method || 'this';
+    if (!confirm(`Remove the ${methodName} payment QR code?`)) return;
+
+    try {
+        list.splice(idx, 1);
+        await Storage.request('/api/admin-qr', {
+            method: 'PUT',
+            body: JSON.stringify({ paymentQrs: list })
+        });
+
+        adminCachedQrs = list;
+        showToast(`Payment QR code for "${methodName}" removed.`);
+        const container = document.getElementById('payment-qrs-list');
+        renderQrListHtml(container, list);
+    } catch (err) {
+        alert('Could not delete QR code: ' + err.message);
+    }
 }
 
 function loadPaymentQrCode() {

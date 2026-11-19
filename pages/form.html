@@ -33,6 +33,17 @@
             margin: 15px 0;
             border: 1px dashed var(--rose);
         }
+            .turnover-input-grid {
+            display: grid;
+            grid-template-columns: 110px 1fr;
+            gap: 8px;
+        }
+        @media (max-width: 600px) {
+            .turnover-input-grid {
+                grid-template-columns: 95px 1fr !important;
+                gap: 6px !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -96,8 +107,8 @@
 
                     <div class="form-group">
                         <label>Where to Turnover the Output</label>
-                        <div style="display: grid; grid-template-columns: 160px 1fr; gap: 10px; flex-wrap: wrap;">
-                            <select id="email" name="email">
+                        <div class="turnover-input-grid">
+                            <select id="email" name="email" style="padding: 10px 6px; font-size: 13px;">
                                 <option value="Gmail">Gmail</option>
                                 <option value="Telegram">Telegram</option>
                                 <option value="Google Drive">Google Drive</option>
@@ -107,7 +118,13 @@
                                 <option value="Twitter/X">Twitter / X</option>
                                 <option value="Other">Other</option>
                             </select>
-                            <input type="text" id="turnover-account" name="turnover-account" placeholder="e.g. yourname@gmail.com or @username" required oninput="validateTurnoverMatch(this.value)">
+                            <input type="text" id="turnover-account" name="turnover-account" placeholder="e.g. yourname@gmail.com or @username" required oninput="handleTurnoverAccountInput(this.value)">
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+                            <input type="checkbox" id="turnover-same-name-checkbox" style="width: 16px; height: 16px; accent-color: var(--maroon); cursor: pointer;" onchange="handleSameAsClientName(this.checked)">
+                            <label for="turnover-same-name-checkbox" style="font-size: 12px; color: #5a2e2e; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; margin-bottom: 0;">
+                                Turnover account is same as Client Name
+                            </label>
                         </div>
                         <div id="turnover-match-hint" style="display:none; margin-top:6px; font-size:11.5px; color:#276749; font-family:'Special Elite',monospace; padding:6px 10px; background:#f0fff4; border-radius:4px; border:1px solid #c6f6d5;">
                             Matches your client name on file.
@@ -162,9 +179,9 @@
                     <!-- Client Name Verification -->
                     <div class="form-group">
                         <label for="payment-client-name">Client Name (Must be an Approved Commission)</label>
-                        <div style="display: flex; gap: 8px;">
-                            <input id="payment-client-name" type="text" required placeholder="Type your client name to check approved status..." oninput="handleClientNameInput(this.value)" style="flex: 1;">
-                            <button type="button" class="btn-action btn-primary" onclick="verifyPaymentClient(true)" style="padding: 9px 16px; font-size: 12px; white-space:nowrap;">Check Status</button>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <input id="payment-client-name" type="text" required placeholder="Type your client name to check approved status..." oninput="handleClientNameInput(this.value)" style="flex: 1; min-width: 0;">
+                            <button type="button" class="btn-action btn-primary" onclick="verifyPaymentClient(true)" style="padding: 9px 16px; font-size: 12px; white-space:nowrap; flex-shrink: 0;">Check Status</button>
                         </div>
                         <div id="payment-client-status-box" style="display: none; margin-top: 10px; padding: 12px 14px; border-radius: 6px; font-size: 12.5px; font-family:'Special Elite', monospace;"></div>
                     </div>
@@ -274,7 +291,25 @@
         </div>
     </div>
 
-    <script src="../js/storage.js"></script>
+    <script src="../js/storage.js">
+        // Sync name changes to turnover account if checkbox is active
+        document.addEventListener('DOMContentLoaded', () => {
+            const nameEl = document.getElementById('name');
+            if (nameEl) {
+                nameEl.addEventListener('input', () => {
+                    const cb = document.getElementById('turnover-same-name-checkbox');
+                    if (cb && cb.checked) {
+                        const turnoverEl = document.getElementById('turnover-account');
+                        if (turnoverEl) {
+                            turnoverEl.value = nameEl.value;
+                            validateTurnoverMatch(nameEl.value);
+                        }
+                    }
+                });
+            }
+        });
+
+    </script>
     <script>
         let uploadedCommissionFiles = [];
         let tempPaymentProofBase64 = '';
@@ -345,6 +380,40 @@
         // ============================================
         // 2. SEARCH & EDIT EXISTING COMMISSION (TAB 1)
         // ============================================
+                function handleSameAsClientName(isChecked) {
+            const nameInput = document.getElementById('name');
+            const turnoverInput = document.getElementById('turnover-account');
+            if (!turnoverInput) return;
+            if (isChecked) {
+                const clientName = nameInput ? nameInput.value.trim() : '';
+                turnoverInput.value = clientName;
+                validateTurnoverMatch(clientName);
+            }
+        }
+
+        function handleTurnoverAccountInput(val) {
+            validateTurnoverMatch(val);
+            const cb = document.getElementById('turnover-same-name-checkbox');
+            const clientName = document.getElementById('name')?.value.trim() || '';
+            if (cb && cb.checked && val !== clientName) {
+                cb.checked = false;
+            }
+        }
+
+        let clientCachedQrs = null;
+        async function fetchClientPaymentQrs() {
+            if (clientCachedQrs !== null) return clientCachedQrs;
+            try {
+                const res = await fetch('/api/client-qr');
+                const json = await res.json();
+                clientCachedQrs = Array.isArray(json.paymentQrs) ? json.paymentQrs : [];
+            } catch (e) {
+                console.warn('Could not fetch client QRs:', e);
+                clientCachedQrs = [];
+            }
+            return clientCachedQrs;
+        }
+
         function validateTurnoverMatch(val) {
             const hint = document.getElementById('turnover-match-hint');
             if (!hint) return;
@@ -615,7 +684,7 @@
             }
         }
 
-        function updateDisplayedQrCode() {
+        async function updateDisplayedQrCode() {
             if (!currentApprovedCommission) return;
             const qrWrap = document.getElementById('admin-payment-qr-wrap');
             const qrImg = document.getElementById('admin-payment-qr-img');
@@ -630,15 +699,18 @@
             const hiddenMode = document.getElementById('payment-mode-select');
             if (hiddenMode) hiddenMode.value = selectedMode;
 
-            const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, {}) || {};
-            const qrs = Array.isArray(settings.paymentQrs) ? settings.paymentQrs : [];
+            let qrs = await fetchClientPaymentQrs();
+            if (!qrs || qrs.length === 0) {
+                const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, {}) || {};
+                qrs = Array.isArray(settings.paymentQrs) ? settings.paymentQrs : [];
+            }
 
             // Find matching QR by method name
-            let match = qrs.find(q => q.method.toLowerCase() === selectedMode.toLowerCase());
-            if (!match && selectedMode === 'GCash' && settings.paymentQrCode) {
-                match = { method: 'GCash', image: settings.paymentQrCode };
-            } else if (!match && qrs.length > 0) {
-                // Fallback to first available if custom mode selected
+            let match = qrs.find(q => q.method && q.method.toLowerCase() === selectedMode.toLowerCase());
+            if (!match && selectedMode === 'GCash') {
+                match = qrs.find(q => q.method && q.method.toLowerCase() === 'gcash');
+            }
+            if (!match && qrs.length > 0 && qrs[0].image) {
                 match = qrs[0];
             }
 

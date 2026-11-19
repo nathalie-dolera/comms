@@ -211,12 +211,20 @@
             margin: 0;
         }
 
+        .client-calendar-scroll-wrap {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 6px;
+        }
+
         .client-calendar-grid {
             display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 8px;
+            grid-template-columns: repeat(7, minmax(85px, 1fr));
+            gap: 6px;
             margin-top: 14px;
             width: 100%;
+            min-width: 620px;
             box-sizing: border-box;
         }
 
@@ -271,18 +279,18 @@
         }
 
         .client-event-pill {
-            font-size: 10.5px;
-            padding: 3px 5px;
+            font-size: 10px;
+            padding: 4px 6px;
             border-radius: 4px;
             margin-top: 3px;
             white-space: normal;
-            line-height: 1.5;
-            word-break: break-word;
+            line-height: 1.3;
+            word-break: normal;
+            overflow-wrap: break-word;
             display: block;
             font-family: 'Poppins', sans-serif;
             box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-            overflow: hidden;
-            text-overflow: ellipsis;
+            text-align: center;
         }
 
         .pill-open {
@@ -325,6 +333,12 @@
         .badge-turned { background: #faf5ff; color: #6b46c1; border: 1px solid #e9d8fd; }
 
         @media (max-width: 850px) {
+            .calendar-card {
+                padding: 16px 10px !important;
+            }
+            .cal-scroll-hint {
+                display: flex !important;
+            }
             .tracker-grid {
                 grid-template-columns: 1fr;
             }
@@ -413,8 +427,13 @@
                     <span style="color: #1e40af; font-weight: 600;">● All blue dates commissioner is not available</span>
                     <span style="color: #dc2626; font-weight: 600;">● Red dates are commission deadlines</span>
                 </div>
-                <div class="client-calendar-grid" id="client-calendar-grid">
-                    <!-- Injected via JS -->
+                <div class="cal-scroll-hint" style="display: none; align-items: center; justify-content: center; gap: 6px; background: rgba(107, 24, 20, 0.08); padding: 6px 12px; border-radius: 4px; font-size: 11.5px; color: var(--maroon); font-family: 'Special Elite', monospace; margin-bottom: 10px;">
+                    <span>&#8592;&#8594;</span> <span>Swipe horizontally to view full calendar</span>
+                </div>
+                <div class="client-calendar-scroll-wrap">
+                    <div class="client-calendar-grid" id="client-calendar-grid">
+                        <!-- Injected via JS -->
+                    </div>
                 </div>
             </div>
         </div>
