@@ -736,13 +736,10 @@ function renderCommissionViewTab(sub) {
 
     container.innerHTML = `
         <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <div>
                 <button type="button" class="btn-action btn-secondary" onclick="switchBackToCommissionsList()" style="padding: 8px 16px; font-size: 13px; font-weight: 600;">
                     ← Back to Commissions
                 </button>
-                <h2 style="font-family:'Special Elite', monospace; font-size: 20px; color: var(--paper-cream); margin: 0; text-transform: uppercase;">
-                    Commission Details: <span style="color: var(--rose);">${escapeHtml(sub.id)}</span>
-                </h2>
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                 ${(!sub.status || sub.status === 'Pending') ? `
@@ -823,40 +820,52 @@ function renderCommissionViewTab(sub) {
 
             <!-- ATTACHED DOCUMENTS & FILES SECTION -->
             <div style="margin-bottom: 24px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <label style="color: var(--maroon); font-weight: bold; font-family:'Special Elite', monospace; text-transform: uppercase; font-size: 13px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                    <label style="color: var(--maroon); font-weight: bold; font-family:'Special Elite', monospace; text-transform: uppercase; font-size: 14px;">
                         📁 Attached Documents &amp; Files (${refFiles.length})
+                    </label>
+                    <label class="btn-action btn-secondary" style="padding: 5px 12px; font-size: 11.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-family:'Special Elite', monospace;">
+                        + Attach File to this Commission
+                        <input type="file" multiple onchange="adminAttachFilesToCommission('${sub.id}', this)" style="display:none;">
                     </label>
                 </div>
 
                 ${refFiles.length === 0 ? `
-                    <div style="background: #faf4ee; border: 1px dashed #dcd0c2; border-radius: 6px; padding: 18px; text-align: center; color: #886560; font-size: 13px; font-family: 'Special Elite', monospace;">
-                        No files or documents attached with this commission request.
+                    <div style="background: #faf4ee; border: 1px dashed #dcd0c2; border-radius: 6px; padding: 22px; text-align: center; color: #886560; font-size: 13px; font-family: 'Special Elite', monospace;">
+                        No files or documents attached yet. Click "+ Attach File to this Commission" above to add reference materials or documents!
                     </div>
                 ` : `
                     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px;">
                         ${refFiles.map((f, fIdx) => {
-                            const isImg = f.data && (f.data.startsWith('data:image/') || (f.type && f.type.startsWith('image/')));
+                            const isImg = (f.data && f.data.startsWith('data:image/')) || (f.type && f.type.startsWith('image/')) || /\.(jpg|jpeg|png|gif|webp|bmp|svg|jfif)$/i.test(f.name || '');
+                            const isPdf = (f.type && f.type.includes('pdf')) || /\.pdf$/i.test(f.name || '');
                             return `
-                            <div style="background: #ffffff; border: 1px solid #dcd0c2; border-radius: 8px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; flex-direction: column; justify-content: space-between; transition: all 0.2s;">
+                            <div style="background: #ffffff; border: 1px solid #dcd0c2; border-radius: 8px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; flex-direction: column; justify-content: space-between;">
                                 <div>
-                                    ${isImg ? `
+                                    ${isImg && f.data ? `
                                         <div style="width: 100%; height: 160px; border-radius: 6px; overflow: hidden; background: #faf4ee; border: 1px dashed #dcd0c2; margin-bottom: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="previewReferenceImage('${f.data}', '${escapeHtml(f.name)}')">
                                             <img src="${f.data}" alt="${escapeHtml(f.name)}" style="max-width: 100%; max-height: 100%; object-fit: contain;">
                                         </div>
                                     ` : `
-                                        <div style="width: 100%; height: 90px; border-radius: 6px; background: #faf4ee; border: 1px dashed #dcd0c2; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; font-size: 38px;">
-                                            📄
+                                        <div style="width: 100%; height: 100px; border-radius: 6px; background: #faf4ee; border: 1px dashed #dcd0c2; margin-bottom: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; ${f.data ? 'cursor: pointer;' : ''}" ${f.data ? `onclick="window.open('${f.data}', '_blank')"` : ''}>
+                                            <span style="font-size: 36px;">${isPdf ? '📕' : '📄'}</span>
+                                            <span style="font-size: 11px; color: #8c5b52; font-family:'Special Elite',monospace; margin-top: 4px;">${isPdf ? 'PDF Document' : 'Document'}</span>
                                         </div>
                                     `}
                                     <div style="font-weight: 700; font-size: 13.5px; color: var(--maroon-dark); word-break: break-all; margin-bottom: 4px; font-family: 'Poppins', sans-serif;">
-                                        ${escapeHtml(f.name || 'Attached File')}
+                                        ${f.data ? `
+                                            <a href="${f.data}" target="_blank" style="color: var(--maroon-dark); text-decoration: underline;" title="Click to view file">
+                                                ${escapeHtml(f.name || 'Attached File')}
+                                            </a>
+                                        ` : `
+                                            ${escapeHtml(f.name || 'Attached File')}
+                                        `}
                                     </div>
                                     <div style="font-size: 11.5px; color: #777; margin-bottom: 12px;">
                                         ${escapeHtml(f.size || '')} ${f.type ? '• ' + escapeHtml(f.type) : ''}
                                     </div>
                                 </div>
-                                <div style="display: flex; gap: 8px; padding-top: 8px; border-top: 1px solid #f0e6dc;">
+                                <div style="display: flex; gap: 8px; padding-top: 10px; border-top: 1px solid #f0e6dc; align-items: center;">
                                     ${f.data ? `
                                         <a href="${f.data}" target="_blank" class="btn-action" style="flex: 1; text-align: center; text-decoration: none; padding: 8px; font-size: 12px; background: #5a4a3a; color: #fff; border-radius: 4px; font-family:'Special Elite', monospace;">
                                             👁 Open / View
@@ -865,10 +874,11 @@ function renderCommissionViewTab(sub) {
                                             ⬇ Download
                                         </a>
                                     ` : `
-                                        <span style="font-size: 11.5px; color: #999; font-style: italic; width: 100%; text-align: center; padding: 6px;">
-                                            File name on file (legacy submission)
+                                        <span style="font-size: 11px; color: #9c4221; font-style: italic; width: 100%; text-align: center; padding: 4px; background: #fff5f0; border-radius: 4px;">
+                                            Content not stored (submitted in earlier app version).
                                         </span>
                                     `}
+                                    <button type="button" onclick="adminDeleteCommissionFile('${sub.id}', ${fIdx})" class="btn-action btn-danger" style="padding: 7px 10px; font-size: 11px;" title="Delete this file">✕</button>
                                 </div>
                             </div>
                             `;
@@ -4204,4 +4214,69 @@ function previewReferenceImage(src, name) {
         </div>
     `;
     document.body.appendChild(overlay);
+}
+
+async function adminAttachFilesToCommission(commId, input) {
+    const files = input.files;
+    if (!files || files.length === 0) return;
+
+    showToast('Attaching files to commission...');
+    const list = Storage.get(Storage.KEYS.SUBMISSIONS, []);
+    const idx = list.findIndex(s => s.id === commId);
+    if (idx === -1) return;
+
+    if (!Array.isArray(list[idx].referenceFiles)) {
+        list[idx].referenceFiles = [];
+    }
+
+    for (const f of Array.from(files)) {
+        const formattedSize = f.size ? (f.size / 1024).toFixed(1) + ' KB' : 'Unknown size';
+        let dataUrl = '';
+        const isImg = (f.type && f.type.startsWith('image/')) || /\.(jpg|jpeg|png|gif|webp|bmp|svg|heic)$/i.test(f.name || '');
+        if (isImg) {
+            try {
+                dataUrl = await compressImageFile(f, 1200, 0.82);
+            } catch (e) {
+                dataUrl = '';
+            }
+        }
+        if (!dataUrl) {
+            try {
+                dataUrl = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = e => resolve(e.target.result);
+                    reader.onerror = () => resolve('');
+                    reader.readAsDataURL(f);
+                });
+            } catch (e) {
+                dataUrl = '';
+            }
+        }
+
+        list[idx].referenceFiles.push({
+            name: f.name,
+            size: formattedSize,
+            type: f.type || 'Document',
+            data: dataUrl
+        });
+    }
+
+    Storage.set(Storage.KEYS.SUBMISSIONS, list);
+    input.value = '';
+    showToast('Files attached successfully!');
+    switchToViewCommissionTab(commId);
+}
+
+function adminDeleteCommissionFile(commId, fileIdx) {
+    if (!confirm('Remove this attached file?')) return;
+    const list = Storage.get(Storage.KEYS.SUBMISSIONS, []);
+    const idx = list.findIndex(s => s.id === commId);
+    if (idx === -1) return;
+
+    if (Array.isArray(list[idx].referenceFiles)) {
+        list[idx].referenceFiles.splice(fileIdx, 1);
+        Storage.set(Storage.KEYS.SUBMISSIONS, list);
+        showToast('Attached file removed.');
+        switchToViewCommissionTab(commId);
+    }
 }

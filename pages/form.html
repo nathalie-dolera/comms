@@ -1084,19 +1084,25 @@
                 if (exists) continue;
 
                 let dataUrl = '';
-                try {
-                    if (f.type && f.type.startsWith('image/')) {
+                const isImage = (f.type && f.type.startsWith('image/')) || /\.(jpg|jpeg|png|gif|webp|bmp|svg|heic)$/i.test(f.name || '');
+                if (isImage) {
+                    try {
                         dataUrl = await compressImageFile(f, 1200, 0.82);
-                    } else {
-                        dataUrl = await new Promise((resolve, reject) => {
+                    } catch (e) {
+                        dataUrl = '';
+                    }
+                }
+                if (!dataUrl) {
+                    try {
+                        dataUrl = await new Promise((resolve) => {
                             const reader = new FileReader();
                             reader.onload = e => resolve(e.target.result);
-                            reader.onerror = reject;
+                            reader.onerror = () => resolve('');
                             reader.readAsDataURL(f);
                         });
+                    } catch (e) {
+                        dataUrl = '';
                     }
-                } catch (err) {
-                    console.warn('Could not read file data for', f.name, err);
                 }
 
                 uploadedCommissionFiles.push({
