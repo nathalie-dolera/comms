@@ -554,6 +554,9 @@ function changeCommissionStatus(id, newStatus) {
     const item = list.find(s => s.id === id);
     if (item) {
         item.status = newStatus;
+        if (newStatus === 'Done' || newStatus === 'Turned Over') {
+            item.adminNote = '';
+        }
         Storage.set(Storage.KEYS.SUBMISSIONS, list);
         showToast(`Status updated to "${newStatus}" for ${item.name}`);
         renderSubmissions();
@@ -751,7 +754,11 @@ function saveSubmissionEdits(id) {
     list[idx].service = newService;
     list[idx].deadline = newDeadline;
     list[idx].description = newDescription;
-    list[idx].adminNote = newAdminNote;
+    if (newStatus === 'Done' || newStatus === 'Turned Over') {
+        list[idx].adminNote = '';
+    } else {
+        list[idx].adminNote = newAdminNote;
+    }
 
     Storage.set(Storage.KEYS.SUBMISSIONS, list);
     showToast('Commission updated successfully!');
@@ -3294,12 +3301,18 @@ function loadPaymentQrCodes() {
             <div style="font-family:'Special Elite', monospace; font-size: 14px; font-weight: bold; color: var(--maroon-dark); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
                 ${escapeHtml(item.method)}
             </div>
-            <div style="width: 140px; height: 140px; border: 1px dashed #dcd0c2; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #faf4ee; margin-bottom: 12px;">
-                <img src="${item.image}" alt="${escapeHtml(item.method)} QR" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+            <div style="width: 140px; height: 140px; border: 1px dashed #dcd0c2; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #faf4ee; margin-bottom: 12px; cursor: pointer;" onclick="previewQrImage('${escapeHtml(item.method)}', ${idx})" title="Click to view full size">
+                <img src="${item.image}" alt="${escapeHtml(item.method)} QR" style="max-width: 100%; max-height: 100%; object-fit: contain;" onerror="this.parentElement.innerHTML='<span style=\'color:#a94442;font-size:11px;text-align:center;\'>QR image failed to load. Try re-uploading.</span>';">
             </div>
-            <button type="button" class="btn-action btn-danger" onclick="deleteMultiPaymentQr(${idx})" style="padding: 4px 12px; font-size: 11px; width: 100%;">
-                Delete QR
-            </button>
+            <div style="display: flex; gap: 6px; width: 100%;">
+                <label style="flex:1; text-align:center; padding: 4px 8px; font-size: 11px; background:#5a4a3a; color:#fff; border-radius:4px; cursor:pointer; font-family:'Special Elite',monospace;">
+                    Replace
+                    <input type="file" accept="image/*" onchange="replaceQrImage(${idx}, this)" style="display:none;">
+                </label>
+                <button type="button" class="btn-action btn-danger" onclick="deleteMultiPaymentQr(${idx})" style="flex:1; padding: 4px 8px; font-size: 11px;">
+                    Delete QR
+                </button>
+            </div>
         </div>
     `).join('');
 }
@@ -3344,6 +3357,42 @@ async function handleSaveMultiPaymentQr() {
         loadPaymentQrCodes();
     } catch (err) {
         alert('Could not save QR code: ' + err.message);
+    }
+}
+
+function previewQrImage(method, idx) {
+    const list = getPaymentQrsList();
+    if (!list[idx]) return;
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:10000;cursor:pointer;';
+    overlay.onclick = () => overlay.remove();
+    overlay.innerHTML = `
+        <div style="text-align:center;max-width:90%;max-height:90%;">
+            <div style="font-family:'Special Elite',monospace;font-size:18px;color:#fff;margin-bottom:12px;text-transform:uppercase;">${escapeHtml(method)} QR Code</div>
+            <img src="${list[idx].image}" alt="${escapeHtml(method)} QR" style="max-width:100%;max-height:80vh;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.5);">
+            <div style="color:#ccc;font-size:12px;margin-top:8px;">Click anywhere to close</div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+}
+
+async function replaceQrImage(idx, input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    try {
+        const optimizedImage = await compressImageFile(file, 800, 0.85);
+        const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, {}) || {};
+        const list = getPaymentQrsList();
+        if (!list[idx]) return;
+        list[idx].image = optimizedImage;
+        settings.paymentQrs = list;
+        if (idx === 0) settings.paymentQrCode = optimizedImage;
+        Storage.set(Storage.KEYS.SITE_SETTINGS, settings);
+        input.value = '';
+        showToast(`QR Code for "${list[idx].method}" replaced!`);
+        loadPaymentQrCodes();
+    } catch (err) {
+        alert('Could not replace QR code: ' + err.message);
     }
 }
 

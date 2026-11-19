@@ -558,7 +558,7 @@
                                 <p style="margin-top: 4px; color: #666;">${escapeHtml(match.description || 'Custom Commission')}</p>
                             </div>
 
-                            ${match.adminNote ? `
+                            ${(match.adminNote && match.status !== 'Done' && match.status !== 'Turned Over') ? `
                             <div style="margin-top: 14px; background: #fff8f0; border-radius: 4px; padding: 12px 14px; font-size: 13px;">
                                 <div style="font-weight: 700; color: #8b2f3a; margin-bottom: 4px; font-family: 'Special Elite', monospace; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Commissioner's Note</div>
                                 <div style="color: #444; line-height: 1.6;">${escapeHtml(match.adminNote)}</div>
