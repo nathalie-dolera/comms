@@ -1312,8 +1312,10 @@ body.admin-body::before {
     transition: border-color 0.2s;
 }
 
-.image-upload-preview:hover {
-    border-color: var(--rose);
+.image-upload-preview:hover,
+.image-upload-preview.drag-active {
+    border-color: var(--maroon);
+    background-color: #fff0ea;
 }
 
 .image-upload-preview .upload-text {

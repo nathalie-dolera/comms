@@ -152,7 +152,19 @@
                         <p style="font-size: 12px; color: #7a5048; margin-top: 2px; margin-bottom: 8px; font-style: italic;">
                             Attach documents, reviewer guidelines, drafts, slides, or reference materials that need to be worked on:
                         </p>
-                        <input type="file" id="commission-files" multiple onchange="handleCommissionFilesUpload(event)" style="background: #ffffff;">
+                        <div id="commission-dropzone"
+                            style="border: 2px dashed #c9a090; border-radius: 6px; background: #fdf8f5; padding: 18px 16px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; position: relative;"
+                            onclick="document.getElementById('commission-files').click()"
+                            ondragover="commDragOver(event)"
+                            ondragleave="commDragLeave(event)"
+                            ondrop="commDrop(event)">
+                            <input type="file" id="commission-files" multiple onchange="handleCommissionFilesUpload(event)" style="display:none;">
+                            <div style="font-size: 13px; color: #8c5b52; font-family: 'Special Elite', monospace; pointer-events: none;">
+                                <span style="font-size: 22px;">📁</span><br>
+                                Click, drag &amp; drop, or paste files here
+                            </div>
+                            <div style="font-size: 11px; color: #b08070; margin-top: 4px; pointer-events: none;">Accepts images, PDFs, documents, slides</div>
+                        </div>
                         <div id="commission-files-preview" style="margin-top: 8px; font-size: 12px; color: var(--maroon); font-family: 'Special Elite', monospace;"></div>
                     </div>
 
@@ -275,12 +287,7 @@
                 <h2 style="font-family:'Playfair Display', serif; color: var(--maroon-dark); font-size: 26px;">Commission Submitted!</h2>
                 <p style="color: #666; font-size: 14px; margin-top: 8px;">Thank you! Your project details have been sent to the queue.</p>
                 
-                <div>
-                    <span style="display:block; font-size:12px; text-transform:uppercase; color:#999; margin-top: 15px;">Your Commission Tracking ID</span>
-                    <div class="success-id" id="assigned-comm-id">COM-1005</div>
-                </div>
-
-                <p style="font-size: 13px; color: #555; margin-bottom: 20px;">Save this ID to check your live commission progress anytime!</p>
+                <div id="assigned-comm-id" style="display:none;"></div>
 
                 <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                     <a id="track-direct-link" href="tracker.html" class="nav-btn" style="text-decoration:none;">Track My Commission Status →</a>
@@ -302,7 +309,9 @@
                         const turnoverEl = document.getElementById('turnover-account');
                         if (turnoverEl) {
                             turnoverEl.value = nameEl.value;
-                            validateTurnoverMatch(nameEl.value);
+                            // Don't show hint when checkbox syncs the value
+                            const hint = document.getElementById('turnover-match-hint');
+                            if (hint) hint.style.display = 'none';
                         }
                     }
                 });
@@ -383,20 +392,28 @@
                 function handleSameAsClientName(isChecked) {
             const nameInput = document.getElementById('name');
             const turnoverInput = document.getElementById('turnover-account');
+            const hint = document.getElementById('turnover-match-hint');
             if (!turnoverInput) return;
             if (isChecked) {
                 const clientName = nameInput ? nameInput.value.trim() : '';
                 turnoverInput.value = clientName;
-                validateTurnoverMatch(clientName);
+                // Hide hint when checkbox is used — it's redundant
+                if (hint) hint.style.display = 'none';
+            } else {
+                validateTurnoverMatch(turnoverInput.value);
             }
         }
 
         function handleTurnoverAccountInput(val) {
-            validateTurnoverMatch(val);
             const cb = document.getElementById('turnover-same-name-checkbox');
             const clientName = document.getElementById('name')?.value.trim() || '';
+            // Uncheck "same as client name" if user types something different
             if (cb && cb.checked && val !== clientName) {
                 cb.checked = false;
+            }
+            // Only show the hint when NOT using the checkbox
+            if (!cb || !cb.checked) {
+                validateTurnoverMatch(val);
             }
         }
 
@@ -413,6 +430,39 @@
             }
             return clientCachedQrs;
         }
+
+
+        // --- Commission file dropzone ---
+        function commDragOver(e) {
+            e.preventDefault();
+            const dz = document.getElementById('commission-dropzone');
+            if (dz) { dz.style.borderColor = 'var(--maroon)'; dz.style.background = '#fff0ea'; }
+        }
+        function commDragLeave(e) {
+            const dz = document.getElementById('commission-dropzone');
+            if (dz) { dz.style.borderColor = '#c9a090'; dz.style.background = '#fdf8f5'; }
+        }
+        function commDrop(e) {
+            e.preventDefault();
+            commDragLeave(e);
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                handleCommissionFilesUpload({ target: { files: e.dataTransfer.files } });
+            }
+        }
+
+        // Paste anywhere on the commission form to attach files/images
+        document.addEventListener('paste', function(e) {
+            if (!document.getElementById('commission-dropzone')) return;
+            const items = e.clipboardData?.items;
+            if (!items) return;
+            const files = [];
+            for (const item of items) {
+                if (item.kind === 'file') files.push(item.getAsFile());
+            }
+            if (files.length > 0) {
+                handleCommissionFilesUpload({ target: { files } });
+            }
+        });
 
         function validateTurnoverMatch(val) {
             const hint = document.getElementById('turnover-match-hint');

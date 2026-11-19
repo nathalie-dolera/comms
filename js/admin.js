@@ -364,6 +364,83 @@ function closeModal(id) {
 }
 
 // Image File to Base64 helper
+// ============================================
+// ADMIN DRAG & DROP / PASTE IMAGE UPLOAD HELPERS
+// ============================================
+function adminDragOver(e, el) {
+    e.preventDefault();
+    if (el) el.classList.add('drag-active');
+}
+function adminDragLeave(el) {
+    if (el) el.classList.remove('drag-active');
+}
+function adminDrop(e, el, target) {
+    e.preventDefault();
+    adminDragLeave(el);
+    const files = e.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+    _adminHandleFiles(files, target);
+}
+function _adminHandleFiles(files, target) {
+    const file = files[0];
+    if (!file) return;
+    if (target === 'fb-preview-box') {
+        previewImageFile({ target: { files } }, 'fb-preview-box');
+    } else if (target === 'comm-receipt') {
+        previewCommissionReceipt({ target: { files } });
+    } else if (target === 'default-proof-preview-box') {
+        previewDefaultProofImage({ target: { files } });
+    } else if (target === 'out-samples') {
+        previewOutputSamples({ target: { files } });
+    } else if (target === 'pay-receipt') {
+        previewPaymentReceipt({ target: { files } });
+    } else if (target === 'new-qr') {
+        // Trigger the QR file input
+        const inp = document.getElementById('new-qr-file-input');
+        if (inp) {
+            const dt = new DataTransfer();
+            for (const f of Array.from(files)) dt.items.add(f);
+            inp.files = dt.files;
+            inp.dispatchEvent(new Event('change'));
+        }
+    }
+}
+
+// Paste anywhere in the admin portal to upload images to focused dropzone
+(function initAdminPaste() {
+    document.addEventListener('paste', function(e) {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        const files = [];
+        for (const item of items) {
+            if (item.kind === 'file' && item.type.startsWith('image/')) {
+                files.push(item.getAsFile());
+            }
+        }
+        if (files.length === 0) return;
+        const fakeFiles = (() => {
+            const dt = new DataTransfer();
+            for (const f of files) dt.items.add(f);
+            return dt.files;
+        })();
+        // Detect which modal is open to route paste to the right target
+        const openModal = document.querySelector('.modal-overlay.active');
+        if (!openModal) return;
+        const modalId = openModal.id;
+        if (modalId === 'modal-add-feedback' || modalId === 'modal-edit-feedback') {
+            previewImageFile({ target: { files: fakeFiles } }, 'fb-preview-box');
+        } else if (modalId === 'modal-add-commission' || modalId === 'modal-edit-commission') {
+            previewCommissionReceipt({ target: { files: fakeFiles } });
+        } else if (modalId === 'modal-default-proof') {
+            previewDefaultProofImage({ target: { files: fakeFiles } });
+        } else if (modalId === 'modal-add-output' || modalId === 'modal-edit-output') {
+            previewOutputSamples({ target: { files: fakeFiles } });
+        } else if (modalId === 'modal-record-payment' || modalId === 'modal-view-receipt') {
+            previewPaymentReceipt({ target: { files: fakeFiles } });
+        }
+    });
+})();
+
 function previewImageFile(event, previewBoxId) {
     const file = event.target.files[0];
     if (!file) return;
