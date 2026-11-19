@@ -398,14 +398,36 @@
                 if (agreedEl && comm.agreedPrice) agreedEl.value = comm.agreedPrice;
 
                 const submitBtn = document.getElementById('comm-submit-btn');
-                if (submitBtn) submitBtn.textContent = `Update Commission Details`;
+                const lockedStatuses = ['In Progress', 'Done', 'Turned Over'];
+                const isLocked = lockedStatuses.includes(comm.status);
 
                 if (clearBtn) clearBtn.style.display = 'inline-block';
 
-                if (statusEl) {
-                    statusEl.style.background = '#e8f5e9';
-                    statusEl.style.color = '#2e7d32';
-                    statusEl.innerHTML = `Found commission for <strong>${escapeHtml(comm.name)}</strong> (Status: <strong>${escapeHtml(comm.status)}</strong>). Details loaded! You can modify fields and save.`;
+                if (isLocked) {
+                    // Lock the form — no editing allowed once commission is active
+                    const form = document.getElementById('client-comm-form');
+                    const inputs = form ? form.querySelectorAll('input, select, textarea, button[type="submit"]') : [];
+                    inputs.forEach(el => { el.disabled = true; });
+
+                    if (statusEl) {
+                        statusEl.style.background = '#fef3c7';
+                        statusEl.style.color = '#92400e';
+                        statusEl.style.border = '1px solid #fde68a';
+                        statusEl.innerHTML = `
+                            <div style="font-weight:bold; margin-bottom:4px;">Commission is <strong>${escapeHtml(comm.status)}</strong> — Editing is Locked</div>
+                            <div>Your commission is already being worked on. You can no longer edit its details.</div>
+                            <div style="margin-top:8px;">
+                                <button type="button" onclick="clearCommissionSearch(); enableCommissionForm();" style="font-family:'Special Elite',monospace; font-size:12px; padding:6px 14px; background:var(--maroon); color:white; border:none; border-radius:4px; cursor:pointer;">+ Submit a New Commission Instead</button>
+                            </div>`;
+                    }
+                } else {
+                    if (submitBtn) submitBtn.textContent = 'Update Commission Details';
+                    if (statusEl) {
+                        statusEl.style.background = '#e8f5e9';
+                        statusEl.style.color = '#2e7d32';
+                        statusEl.style.border = '1px solid #a7f3d0';
+                        statusEl.innerHTML = `Found commission for <strong>${escapeHtml(comm.name)}</strong> (Status: <strong>${escapeHtml(comm.status)}</strong>). Details loaded! You can modify fields and save.`;
+                    }
                 }
             } catch (err) {
                 if (statusEl) {
@@ -426,6 +448,14 @@
             if (clearBtn) clearBtn.style.display = 'none';
             const submitBtn = document.getElementById('comm-submit-btn');
             if (submitBtn) submitBtn.textContent = 'Request a Commission';
+            enableCommissionForm();
+        }
+
+        function enableCommissionForm() {
+            const form = document.getElementById('client-comm-form');
+            if (!form) return;
+            const inputs = form.querySelectorAll('input, select, textarea, button[type="submit"]');
+            inputs.forEach(el => { el.disabled = false; });
         }
 
         // ============================================
@@ -504,12 +534,14 @@
                     box.style.background = '#ecfdf5';
                     box.style.color = '#065f46';
                     box.style.border = '1px solid #a7f3d0';
+                    const showPaymentAmounts = (comm.status === 'Done' || comm.status === 'Turned Over') && (agreed > 0 || paid > 0);
                     box.innerHTML = `
                         <div style="font-weight: bold; font-size: 13.5px; margin-bottom: 4px;">Commission Approved!</div>
                         <div>Client: <strong>${escapeHtml(comm.name)}</strong> &bull; Service: <strong>${escapeHtml(comm.service || 'Commission')}</strong></div>
+                        ${showPaymentAmounts ? `
                         <div style="margin-top: 6px; font-size: 13px;">
                             Agreed Price: <strong>₱${agreed.toLocaleString()}</strong> | Already Paid: ₱${paid.toLocaleString()} | Balance Due: <strong style="color:var(--maroon); font-size:14px;">₱${bal.toLocaleString()}</strong>
-                        </div>
+                        </div>` : ''}
                     `;
                 }
 

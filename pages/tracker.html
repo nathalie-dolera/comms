@@ -486,9 +486,10 @@
                     const agreedAmount = Number(match.agreedPrice) || 0;
                     const balanceAmount = Math.max(0, Number(match.balance) || agreedAmount - paidAmount);
                     
-                    let paymentStatusLabel = 'N/A';
+                    const hasPaymentData = paidAmount > 0 || (match.paymentType && match.paymentType !== 'downpayment') || match.payment;
+                    let paymentStatusLabel = 'Awaiting Payment';
                     let paymentStatusColor = '#666';
-                    if (paidAmount > 0 || match.paymentType) {
+                    if (hasPaymentData) {
                         const isFullyPaid = (match.paymentType === 'fully_paid') || (balanceAmount === 0 && paidAmount > 0) || (paidAmount > 0 && agreedAmount > 0 && paidAmount >= agreedAmount);
                         paymentStatusLabel = isFullyPaid ? 'Fully Paid' : '50% DP';
                         if (!isFullyPaid && balanceAmount > 0) {
@@ -532,18 +533,18 @@
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; background: #faf8f5; padding: 15px; border-radius: 4px; font-size: 13px;">
                                 <div><strong>Target Deadline:</strong> ${escapeHtml(match.deadline || 'Flexible')}</div>
                                 <div><strong>Submitted Date:</strong> ${escapeHtml(match.submittedAt ? match.submittedAt.slice(0, 10) : 'Recent')}</div>
-                                <div><strong>Payment Method:</strong> <span style="text-transform: uppercase;">${escapeHtml(match.payment || 'N/A')}</span></div>
-                                <div>
+                                ${hasPaymentData && match.payment ? `<div><strong>Payment Method:</strong> <span style="text-transform: uppercase;">${escapeHtml(match.payment)}</span></div>` : ''}
+                                ${hasPaymentData ? `<div>
                                     <strong>Amount Paid:</strong>
                                     <span style="color: ${paidAmount > 0 ? '#276749' : '#666'}; font-weight: 700;">
-                                        ${paidAmount > 0 ? '₱' + paidAmount.toLocaleString() : 'N/A'}
+                                        ${paidAmount > 0 ? '₱' + paidAmount.toLocaleString() : 'Pending'}
                                     </span>
                                     ${(!isNaN(agreedAmount) && agreedAmount > 0 && agreedAmount > paidAmount && paidAmount > 0) ? `
                                         <span style="font-size: 11.5px; color: #666;">(Agreed Fee: ₱${agreedAmount.toLocaleString()})</span>
                                     ` : (agreedAmount > 0 && paidAmount >= agreedAmount && paidAmount > 0) ? `
                                         <span style="font-size: 11.5px; color: #666;">(Total: ₱${agreedAmount.toLocaleString()})</span>
                                     ` : ''}
-                                </div>
+                                </div>` : ''}
                                 <div>
                                     <strong>Payment Status:</strong>
                                     <span style="font-weight: 600; color: ${paymentStatusColor};">

@@ -23,20 +23,39 @@ module.exports = async (req, res) => {
 
     if (!matches.length) return send(res, 404, { error: `No commissions found for "${query}".` });
 
-    const safeList = matches.map(submission => ({
-      id: submission.id,
-      name: submission.name,
-      service: submission.service,
-      status: submission.status || 'Pending',
-      deadline: submission.deadline || '',
-      submittedAt: submission.submittedAt,
-      amountPaid: submission.amountPaid || 0,
-      agreedPrice: submission.agreedPrice || 0,
-      balance: submission.balance || 0,
-      paymentType: submission.paymentType || '',
-      payment: submission.payment || '',
-      description: submission.description || ''
-    }));
+    // Also load payments to cross-reference actual payment status
+    const payRow = await db.collection('appData').findOne({ key: 'thalie_payments' });
+    const allPayments = Array.isArray(payRow?.value) ? payRow.value : [];
+
+    const safeList = matches.map(submission => {
+      // Find most recent matching payment by commId or client name
+      const matchedPay = allPayments.find(p => p.commId === submission.id) ||
+        allPayments.find(p => p.clientName && submission.name &&
+          p.clientName.trim().toLowerCase() === submission.name.trim().toLowerCase());
+
+      const resolvedAmountPaid = Number(matchedPay?.amount) || Number(submission.amountPaid) || 0;
+      const resolvedAgreedPrice = Number(matchedPay?.agreedPrice) || Number(submission.agreedPrice) || 0;
+      const resolvedBalance = matchedPay
+        ? (Number(matchedPay.balance) || Math.max(0, resolvedAgreedPrice - resolvedAmountPaid))
+        : (Number(submission.balance) || Math.max(0, resolvedAgreedPrice - resolvedAmountPaid));
+      const resolvedPaymentType = matchedPay?.paymentType || submission.paymentType || '';
+      const resolvedPayment = matchedPay?.mode || submission.payment || '';
+
+      return {
+        id: submission.id,
+        name: submission.name,
+        service: submission.service,
+        status: submission.status || 'Pending',
+        deadline: submission.deadline || '',
+        submittedAt: submission.submittedAt,
+        amountPaid: resolvedAmountPaid,
+        agreedPrice: resolvedAgreedPrice,
+        balance: resolvedBalance,
+        paymentType: resolvedPaymentType,
+        payment: resolvedPayment,
+        description: submission.description || ''
+      };
+    });
 
     return send(res, 200, {
       commissions: safeList,
