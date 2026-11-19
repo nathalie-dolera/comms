@@ -832,47 +832,36 @@ function renderCommissionViewTab(sub) {
                         No files or documents attached yet. Click "+ Attach File to this Commission" above to add reference materials or documents!
                     </div>
                 ` : `
-                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px;">
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
                         ${refFiles.map((f, fIdx) => {
                             const isImg = (f.data && f.data.startsWith('data:image/')) || (f.type && f.type.startsWith('image/')) || /\.(jpg|jpeg|png|gif|webp|bmp|svg|jfif)$/i.test(f.name || '');
                             const isPdf = (f.type && f.type.includes('pdf')) || /\.pdf$/i.test(f.name || '');
                             return `
-                            <div style="background: #ffffff; border: 1px solid #dcd0c2; border-radius: 8px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; flex-direction: column; justify-content: space-between;">
-                                <div>
-                                    ${isImg && f.data ? `
-                                        <div style="width: 100%; height: 160px; border-radius: 6px; overflow: hidden; background: #faf4ee; border: 1px dashed #dcd0c2; margin-bottom: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="previewReferenceImage('${f.data}', '${escapeHtml(f.name)}')">
-                                            <img src="${f.data}" alt="${escapeHtml(f.name)}" style="max-width: 100%; max-height: 100%; object-fit: contain;">
-                                        </div>
-                                    ` : `
-                                        <div style="width: 100%; height: 90px; border-radius: 6px; background: #faf4ee; border: 1px dashed #dcd0c2; margin-bottom: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; ${f.data ? 'cursor: pointer;' : ''}" ${f.data ? `onclick="window.open('${f.data}', '_blank')"` : ''} title="${f.data ? 'Click to open file' : ''}">
-                                            <span style="font-size: 12px; font-weight: bold; color: var(--maroon); border: 1px solid #dcd0c2; background: #fff; padding: 4px 10px; border-radius: 4px; font-family:'Special Elite', monospace;">${isPdf ? 'PDF' : 'DOCUMENT'}</span>
-                                            <span style="font-size: 11px; color: #8c5b52; font-family:'Special Elite',monospace; margin-top: 6px;">${f.data ? 'Click to open' : ''}</span>
-                                        </div>
-                                    `}
-                                    <div style="font-weight: 700; font-size: 13.5px; color: var(--maroon-dark); word-break: break-all; margin-bottom: 4px; font-family: 'Poppins', sans-serif;">
-                                        ${f.data ? `
-                                            <a href="${f.data}" target="_blank" style="color: var(--maroon-dark); text-decoration: underline;" title="Click to view file">
-                                                ${escapeHtml(f.name || 'Attached File')}
-                                            </a>
-                                        ` : `
-                                            ${escapeHtml(f.name || 'Attached File')}
-                                        `}
+                            <div style="background: #ffffff; border: 1px solid #dcd0c2; border-radius: 6px; padding: 8px 12px; display: flex; align-items: center; gap: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);">
+                                ${isImg && f.data ? `
+                                    <div style="width: 48px; height: 48px; border-radius: 4px; overflow: hidden; flex-shrink: 0; background: #faf4ee; border: 1px dashed #dcd0c2; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="previewReferenceImage('${f.data}', '${escapeHtml(f.name)}')">
+                                        <img src="${f.data}" alt="${escapeHtml(f.name)}" style="width: 100%; height: 100%; object-fit: cover;">
                                     </div>
-                                    <div style="font-size: 11.5px; color: #777; margin-bottom: 12px;">
-                                        ${escapeHtml(f.size || '')} ${f.type ? '• ' + escapeHtml(f.type) : ''}
+                                ` : `
+                                    <div style="width: 48px; height: 48px; border-radius: 4px; flex-shrink: 0; background: #faf4ee; border: 1px dashed #dcd0c2; display: flex; align-items: center; justify-content: center; ${f.data ? 'cursor: pointer;' : ''}" ${f.data ? `onclick="window.open('${f.data}', '_blank')"` : ''}>
+                                        <span style="font-size: 10px; font-weight: bold; color: var(--maroon); font-family:'Special Elite', monospace;">${isPdf ? 'PDF' : 'DOC'}</span>
                                     </div>
+                                `}
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="font-weight: 700; font-size: 12.5px; color: var(--maroon-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: 'Poppins', sans-serif;" title="${escapeHtml(f.name)}">
+                                        ${escapeHtml(f.name || 'Attached File')}
+                                    </div>
+                                    <div style="font-size: 11px; color: #888;">${escapeHtml(f.size || '')}${f.type ? ' • ' + escapeHtml(f.type) : ''}</div>
                                 </div>
-                                <div style="display: flex; gap: 8px; padding-top: 10px; border-top: 1px solid #f0e6dc; align-items: center;">
+                                <div style="display: flex; gap: 6px; flex-shrink: 0; align-items: center;">
                                     ${f.data ? `
-                                        <a href="${f.data}" download="${escapeHtml(f.name)}" class="btn-action btn-primary" style="flex: 1; text-align: center; text-decoration: none; padding: 8px; font-size: 12px; border-radius: 4px; font-family:'Special Elite', monospace;">
+                                        <a href="${f.data}" download="${escapeHtml(f.name)}" class="btn-action btn-primary" style="text-decoration: none; padding: 5px 10px; font-size: 11px; border-radius: 4px; font-family:'Special Elite', monospace; white-space: nowrap;">
                                             Download
                                         </a>
                                     ` : `
-                                        <span style="font-size: 11px; color: #9c4221; font-style: italic; width: 100%; text-align: center; padding: 4px; background: #fff5f0; border-radius: 4px;">
-                                            Content not stored (submitted in earlier app version).
-                                        </span>
+                                        <span style="font-size: 11px; color: #9c4221; font-style: italic; padding: 4px; background: #fff5f0; border-radius: 4px; white-space: nowrap;">No content stored</span>
                                     `}
-                                    <button type="button" onclick="adminDeleteCommissionFile('${sub.id}', ${fIdx})" class="btn-action btn-danger" style="padding: 7px 10px; font-size: 11px;" title="Delete this file">✕</button>
+                                    <button type="button" onclick="adminDeleteCommissionFile('${sub.id}', ${fIdx})" class="btn-action btn-danger" style="padding: 5px 8px; font-size: 11px;" title="Delete this file">✕</button>
                                 </div>
                             </div>
                             `;
@@ -886,11 +875,15 @@ function renderCommissionViewTab(sub) {
                 <label style="color: var(--maroon); font-weight: bold; font-family:'Special Elite', monospace; text-transform: uppercase; font-size: 12px; display: block; margin-bottom: 6px;">
                     Payment Proof Receipt / Screenshot
                 </label>
-                <div style="background: #faf4ee; border: 1px dashed #dcd0c2; border-radius: 6px; padding: 18px; text-align: center;">
+                <div style="background: #faf4ee; border: 1px dashed #dcd0c2; border-radius: 6px; padding: 12px; display: flex; align-items: center; gap: 14px;">
                     ${sub.downpaymentReceipt ? `
-                        <div style="display: inline-block; cursor: pointer;" onclick="previewReferenceImage('${sub.downpaymentReceipt}', 'Payment Proof - ${escapeHtml(sub.name)}')">
-                            <img src="${sub.downpaymentReceipt}" alt="Payment Proof" style="max-height: 240px; max-width: 100%; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.12); border: 1px solid #dcd0c2;">
-                            <div style="margin-top: 8px; font-size: 11.5px; color: #7a4e4e; font-family:'Special Elite', monospace;">Click image to view full size</div>
+                        <div style="cursor: pointer; flex-shrink: 0;" onclick="previewReferenceImage('${sub.downpaymentReceipt}', 'Payment Proof - ${escapeHtml(sub.name)}')">
+                            <img src="${sub.downpaymentReceipt}" alt="Payment Proof" style="height: 72px; width: auto; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.12); border: 1px solid #dcd0c2; object-fit: contain;">
+                        </div>
+                        <div>
+                            <div style="font-size: 12.5px; font-weight: 600; color: var(--maroon-dark); font-family:'Special Elite', monospace;">Payment Screenshot</div>
+                            <div style="font-size: 11px; color: #7a4e4e; margin-top: 2px;">Click thumbnail to view full size</div>
+                            <a href="${sub.downpaymentReceipt}" download="payment-proof-${escapeHtml(sub.name)}.jpg" class="btn-action btn-primary" style="display: inline-block; margin-top: 6px; padding: 4px 10px; font-size: 11px; text-decoration: none; border-radius: 4px; font-family:'Special Elite', monospace;">Download</a>
                         </div>
                     ` : `
                         <span style="color: #886560; font-style: italic; font-size: 13px; font-family:'Special Elite', monospace;">
