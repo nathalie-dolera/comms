@@ -151,11 +151,9 @@
 
                 <!-- 2. PAYMENT FORM (DEDICATED PAYMENT SUBMISSION WITH DOWNPAYMENT & FULLY PAID) -->
                 <form id="additional-payment-form" onsubmit="submitPaymentProofForm(event)" style="display:none;">
-                    <h2 style="font-family:'Special Elite', monospace; font-size:20px; color:var(--maroon-dark); margin:0 0 6px; text-transform:uppercase; letter-spacing:1px; text-align:center;">
-                        Submit Payment
-                    </h2>
+
                     <p style="text-align:center; font-size:12.5px; color:#7a5048; margin:0 0 18px;">
-                        Enter your client name to verify your approved commission and access payment details.
+                        Enter your name (fully inputted client name from request commission) to verify your approved commission and access payment details.
                     </p>
 
                     <!-- Client Name Verification -->
@@ -207,14 +205,14 @@
                                     <input type="radio" name="payment-option-type" id="pay-opt-dp" value="downpayment" checked onchange="handlePaymentOptionChange('downpayment')" style="display:none;">
                                     <div>
                                         <strong style="display: block; font-family: 'Special Elite', monospace; color: var(--maroon-dark); font-size: 13px;">Down Payment (50%)</strong>
-                                        <span id="dp-subtitle-hint" style="font-size: 11px; color: #7a5048;">50% initial deposit</span>
+
                                     </div>
                                 </label>
                                 <label id="payment-stage-full-lbl" style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px dashed #d4c4b0; border-radius: 6px; background: #ffffff; cursor: pointer; transition: all 0.2s;">
                                     <input type="radio" name="payment-option-type" id="pay-opt-full" value="fully_paid" onchange="handlePaymentOptionChange('fully_paid')" style="display:none;">
                                     <div>
                                         <strong style="display: block; font-family: 'Special Elite', monospace; color: var(--maroon-dark); font-size: 13px;">Full Paid</strong>
-                                        <span id="full-subtitle-hint" style="font-size: 11px; color: #7a5048;">100% full payment</span>
+
                                     </div>
                                 </label>
                             </div>
@@ -554,10 +552,7 @@
 
                 // Update hints & default amount
                 const dpAmount = agreed > 0 ? (agreed * 0.5) : 500;
-                const dpHint = document.getElementById('dp-subtitle-hint');
-                if (dpHint) dpHint.textContent = `50% DP: ₱${dpAmount.toLocaleString()}`;
-                const fullHint = document.getElementById('full-subtitle-hint');
-                if (fullHint) fullHint.textContent = `100% Full: ₱${(bal > 0 ? bal : agreed).toLocaleString()}`;
+
 
                 const amountInput = document.getElementById('payment-amount');
                 if (amountInput && !amountInput.value) {

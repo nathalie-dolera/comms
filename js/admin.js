@@ -648,7 +648,7 @@ function viewSubmissionDetail(id) {
         ` : ''}
 
         <div class="admin-form-group">
-            <label style="color: var(--maroon); font-weight: bold;">📋 Admin Status Note <small style="font-weight:400; color:#7a4e4e;">(visible to client on tracker)</small></label>
+            <label style="color: var(--maroon); font-weight: bold;">Admin Status Note <small style="font-weight:400; color:#7a4e4e;">(visible to client on tracker)</small></label>
             <div class="modal-detail-box" style="color: #444; font-style: ${sub.adminNote ? 'normal' : 'italic'}; min-height: 40px;">
                 ${sub.adminNote || '<span style="color:#aaa;">No status note added yet.</span>'}
             </div>
@@ -675,7 +675,7 @@ function viewSubmissionDetail(id) {
                 <button class="btn-action" style="background:#2e7d32; color:#fff; font-weight:700;" onclick="acceptCommission('${sub.id}'); closeModal('modal-view-submission');">✓ Accept Commission</button>
             ` : ''}
             <button class="btn-action btn-secondary" onclick="recordPaymentFromCommission('${sub.id}')">+ Log Payment in Sheet</button>
-            <button class="btn-action" style="background:#5a4a3a; color:#fff;" onclick="editSubmissionFromView('${sub.id}')">✎ Edit Commission</button>
+            <button class="btn-action" style="background:#5a4a3a; color:#fff;" onclick="editSubmissionFromView('${sub.id}')">Edit Commission</button>
             <button class="btn-action btn-primary" onclick="closeModal('modal-view-submission')">Close</button>
         </div>
     `;
@@ -724,13 +724,13 @@ function editSubmissionFromView(id) {
         </div>
 
         <div class="admin-form-group">
-            <label>📋 Admin Status Note <small style="font-weight:400; color:#7a4e4e;">(visible to client on tracker)</small></label>
+            <label>Admin Status Note <small style="font-weight:400; color:#7a4e4e;">(visible to client on tracker)</small></label>
             <textarea id="edit-sub-admin-note" rows="3" style="width:100%; box-sizing:border-box;" placeholder="e.g. Your design is currently being finalized. We will reach out soon for final review.">${escapeHtml(sub.adminNote || '')}</textarea>
         </div>
 
         <div style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;">
             <button class="btn-action btn-secondary" onclick="viewSubmissionDetail('${sub.id}')">← Back</button>
-            <button class="btn-action btn-primary" onclick="saveSubmissionEdits('${sub.id}')">💾 Save Changes</button>
+            <button class="btn-action btn-primary" onclick="saveSubmissionEdits('${sub.id}')">Save Changes</button>
         </div>
     `;
     document.getElementById('modal-sub-id').textContent = 'Edit Commission';
