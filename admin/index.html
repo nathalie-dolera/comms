@@ -926,6 +926,52 @@
         </div>
     </div>
 
+    <!-- Edit Output Modal -->
+    <div class="modal-overlay" id="modal-edit-output">
+        <div class="modal-box" style="max-width: 650px;">
+            <div class="modal-header">
+                <h3>Edit Project &amp; Manage Samples</h3>
+                <button class="modal-close" onclick="closeModal('modal-edit-output')">&times;</button>
+            </div>
+            <form onsubmit="handleUpdateOutput(event)">
+                <div class="admin-form-group">
+                    <label>Project Title</label>
+                    <input type="text" id="edit-out-title" placeholder="Project Title" required>
+                </div>
+                <div class="admin-form-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <label style="margin-bottom: 0;">Category</label>
+                        <button type="button" class="btn-action btn-secondary" onclick="promptAddNewCategory()" style="padding: 2px 10px; font-size: 11px;">+ New Category</button>
+                    </div>
+                    <select id="edit-out-category" required style="width: 100%;">
+                        <!-- Populated dynamically via JS -->
+                    </select>
+                </div>
+                <div class="admin-form-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <label style="margin-bottom: 0;">Project Samples (Sample 1, Sample 2, ...)</label>
+                        <button type="button" class="btn-action btn-secondary" onclick="document.getElementById('edit-out-samples-file').click()" style="padding: 3px 10px; font-size: 11px;">+ Add More Samples</button>
+                    </div>
+                    <input type="file" id="edit-out-samples-file" accept="image/*" multiple style="display:none;" onchange="previewEditOutputSamples(event)">
+                    <div id="edit-out-samples-preview-grid"
+                        style="display: flex; flex-wrap: wrap; gap: 8px; min-height: 90px; background: #faf4ee; border: 2px dashed #dcd0c2; border-radius: 4px; padding: 10px; align-items: center; justify-content: center; cursor: pointer; transition: border-color 0.2s, background 0.2s;"
+                        onclick="document.getElementById('edit-out-samples-file').click()"
+                        ondragover="adminDragOver(event, this)" ondragleave="adminDragLeave(this)"
+                        ondrop="adminDrop(event, this, 'edit-out-samples')">
+                        <span id="edit-out-samples-empty-hint" style="font-size: 11.5px; color: #886560; font-style: italic;">No samples yet. Click, drag &amp; drop, or paste images here.</span>
+                    </div>
+                    <div style="font-size: 11px; color: #8c5b52; margin-top: 6px; font-style: italic;">
+                        Tip: Click the &times; on any sample to delete it. First sample serves as the cover image.
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button type="submit" class="btn-action btn-primary" style="flex: 1; padding: 11px; font-size: 13.5px;">Save Changes</button>
+                    <button type="button" class="btn-action btn-secondary" onclick="closeModal('modal-edit-output')" style="padding: 11px 18px;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Add Event Modal -->
     <div class="modal-overlay" id="modal-add-event">
         <div class="modal-box">

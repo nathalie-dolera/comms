@@ -581,7 +581,7 @@
                                         <span class="sample-grid-title">Sample #${idx + 1}</span>
                                         <div class="sample-grid-actions">
                                             <button type="button" class="sample-view-btn" onclick="openFullImageAtIndex(${idx})">View</button>
-
+                                            ${isAdmin ? `<button type="button" class="sample-del-btn" onclick="deleteCurrentSample(${idx})">Delete</button>` : ''}
                                         </div>
                                     </div>
                                 </div>

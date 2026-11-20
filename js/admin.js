@@ -395,6 +395,8 @@ function _adminHandleFiles(files, target) {
         previewDefaultProofImage({ target: { files } });
     } else if (target === 'out-samples') {
         previewOutputSamples({ target: { files } });
+    } else if (target === 'edit-out-samples') {
+        previewEditOutputSamples({ target: { files } });
     } else if (target === 'pay-receipt') {
         previewPaymentReceipt({ target: { files } });
     } else if (target === 'new-qr') {
@@ -436,8 +438,10 @@ function _adminHandleFiles(files, target) {
             previewCommissionReceipt({ target: { files: fakeFiles } });
         } else if (modalId === 'modal-default-proof') {
             previewDefaultProofImage({ target: { files: fakeFiles } });
-        } else if (modalId === 'modal-add-output' || modalId === 'modal-edit-output') {
+        } else if (modalId === 'modal-add-output') {
             previewOutputSamples({ target: { files: fakeFiles } });
+        } else if (modalId === 'modal-edit-output') {
+            previewEditOutputSamples({ target: { files: fakeFiles } });
         } else if (modalId === 'modal-record-payment' || modalId === 'modal-view-receipt') {
             previewPaymentReceipt({ target: { files: fakeFiles } });
         }
@@ -1944,7 +1948,56 @@ function promptAddNewCategory() {
     populateCategorySelect(trimmed);
 }
 
+function consolidateDuplicateOutputs() {
+    let list = Storage.get(Storage.KEYS.OUTPUTS, []);
+    if (!list || list.length <= 1) return;
+
+    let changed = false;
+    const titleMap = new Map();
+    const newList = [];
+
+    list.forEach(item => {
+        const titleKey = (item.title || '').trim().toLowerCase();
+        if (!titleKey) {
+            newList.push(item);
+            return;
+        }
+
+        const existing = titleMap.get(titleKey);
+        if (existing) {
+            // Compile samples into existing project
+            changed = true;
+            if (!Array.isArray(existing.samples)) {
+                existing.samples = existing.coverImage ? [existing.coverImage] : [];
+            }
+            const itemSamples = Array.isArray(item.samples) && item.samples.length > 0
+                ? item.samples
+                : (item.coverImage ? [item.coverImage] : []);
+
+            itemSamples.forEach(s => {
+                if (s && !existing.samples.includes(s)) {
+                    existing.samples.push(s);
+                }
+            });
+            if (!existing.coverImage && existing.samples.length > 0) {
+                existing.coverImage = existing.samples[0];
+            }
+        } else {
+            if (!Array.isArray(item.samples)) {
+                item.samples = item.coverImage ? [item.coverImage] : [];
+            }
+            titleMap.set(titleKey, item);
+            newList.push(item);
+        }
+    });
+
+    if (changed) {
+        Storage.set(Storage.KEYS.OUTPUTS, newList);
+    }
+}
+
 function renderOutputs() {
+    consolidateDuplicateOutputs();
     renderAdminOutputFilterBar();
 
     let list = Storage.get(Storage.KEYS.OUTPUTS, []);
@@ -1993,6 +2046,7 @@ function renderOutputs() {
                 </div>
                 <h4 style="margin-bottom: 8px;">${escapeHtml(item.title)}</h4>
                 <div class="admin-item-actions" style="margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap;">
+                    <button class="btn-action btn-primary" onclick="openEditOutputModal('${item.id}')" style="padding: 4px 10px; font-size: 11px;">Edit / Add Samples</button>
                     <a href="../pages/output-detail.html?id=${encodeURIComponent(item.id)}" target="_blank" class="btn-action btn-secondary" style="padding: 4px 10px; font-size: 11px; text-decoration: none;">View Showcase →</a>
                     <button class="btn-action btn-danger" onclick="deleteOutput('${item.id}')" style="padding: 4px 10px; font-size: 11px;">Delete</button>
                 </div>
@@ -2113,7 +2167,23 @@ function handleSaveOutput(event) {
     const list = Storage.get(Storage.KEYS.OUTPUTS, []);
     const now = new Date().toISOString().split('T')[0];
 
-    // Single output with primary sample as coverImage and all samples stored in samples array
+    // Check if a project with the same title already exists — if so, merge samples into it
+    const existingIdx = list.findIndex(o => o.title.trim().toLowerCase() === title.toLowerCase());
+    if (existingIdx !== -1) {
+        if (!Array.isArray(list[existingIdx].samples)) {
+            list[existingIdx].samples = list[existingIdx].coverImage ? [list[existingIdx].coverImage] : [];
+        }
+        list[existingIdx].samples.push(...tempOutputSamples);
+        list[existingIdx].coverImage = list[existingIdx].samples[0] || '';
+        if (category) list[existingIdx].category = category;
+        Storage.set(Storage.KEYS.OUTPUTS, list);
+        closeModal('modal-add-output');
+        showToast(`Added ${tempOutputSamples.length} sample(s) to existing project "${title}"!`);
+        renderOutputs();
+        return;
+    }
+
+    // New project
     list.unshift({
         id: 'out-' + Date.now(),
         title: title,
@@ -2135,6 +2205,126 @@ function deleteOutput(id) {
     list = list.filter(o => o.id !== id);
     Storage.set(Storage.KEYS.OUTPUTS, list);
     showToast('Project removed.');
+    renderOutputs();
+}
+
+// --- Edit Output Project (manage samples: add, delete individual) ---
+let editingOutputId = null;
+let editOutputSamples = [];
+
+function openEditOutputModal(id) {
+    const list = Storage.get(Storage.KEYS.OUTPUTS, []);
+    const item = list.find(o => o.id === id);
+    if (!item) return;
+
+    editingOutputId = id;
+    editOutputSamples = Array.isArray(item.samples) ? item.samples.slice() : (item.coverImage ? [item.coverImage] : []);
+
+    document.getElementById('edit-out-title').value = item.title || '';
+    populateEditOutputCategorySelect(item.category || '');
+    renderEditOutputSamplesPreview();
+    openModal('modal-edit-output');
+}
+
+function populateEditOutputCategorySelect(selected) {
+    const sel = document.getElementById('edit-out-category');
+    if (!sel) return;
+    const cats = getOutputCategories();
+    sel.innerHTML = cats.map(c => `<option value="${c}" ${c === selected ? 'selected' : ''}>${c}</option>`).join('');
+}
+
+function renderEditOutputSamplesPreview() {
+    const container = document.getElementById('edit-out-samples-preview-grid');
+    const hint = document.getElementById('edit-out-samples-empty-hint');
+    if (!container) return;
+
+    if (editOutputSamples.length === 0) {
+        container.innerHTML = `<span id="edit-out-samples-empty-hint" style="font-size: 11.5px; color: #886560; font-style: italic;">No samples. Click or drop images to add.</span>`;
+        return;
+    }
+    if (hint) hint.style.display = 'none';
+
+    container.innerHTML = editOutputSamples.map((imgSrc, idx) => `
+        <div style="position: relative; width: 80px; height: 80px; border: 1px solid #dcd0c2; border-radius: 4px; overflow: hidden;">
+            <img src="${imgSrc}" style="width: 100%; height: 100%; object-fit: cover;">
+            <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: #fff; font-size: 9px; text-align: center; padding: 1px 0; font-family:'Special Elite', monospace;">Sample ${idx + 1}</div>
+            <button type="button" onclick="removeEditOutputSample(${idx})" style="position: absolute; top: 1px; right: 1px; background: rgba(0,0,0,0.7); color: #fff; border: none; border-radius: 50%; width: 16px; height: 16px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;">&times;</button>
+        </div>
+    `).join('');
+}
+
+function removeEditOutputSample(idx) {
+    if (!confirm(`Delete Sample #${idx + 1}?`)) return;
+    editOutputSamples.splice(idx, 1);
+    renderEditOutputSamplesPreview();
+}
+
+async function previewEditOutputSamples(event) {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    for (const file of files) {
+        try {
+            const optimized = await compressImageFile(file);
+            editOutputSamples.push(optimized);
+        } catch {
+            const raw = await new Promise(r => { const rr = new FileReader(); rr.onload = e => r(e.target.result); rr.readAsDataURL(file); });
+            editOutputSamples.push(raw);
+        }
+    }
+    renderEditOutputSamplesPreview();
+    event.target.value = '';
+}
+
+function handleUpdateOutput(event) {
+    event.preventDefault();
+    if (!editingOutputId) return;
+
+    const title = document.getElementById('edit-out-title').value.trim();
+    const category = document.getElementById('edit-out-category').value;
+
+    if (editOutputSamples.length === 0) {
+        alert('A project must have at least one sample image.');
+        return;
+    }
+
+    const list = Storage.get(Storage.KEYS.OUTPUTS, []);
+    const idx = list.findIndex(o => o.id === editingOutputId);
+    if (idx === -1) return;
+
+    list[idx].title = title;
+    list[idx].category = category;
+    list[idx].samples = editOutputSamples.slice();
+    list[idx].coverImage = editOutputSamples[0] || '';
+
+    Storage.set(Storage.KEYS.OUTPUTS, list);
+    closeModal('modal-edit-output');
+    showToast(`Project "${title}" updated!`);
+    editingOutputId = null;
+    editOutputSamples = [];
+    renderOutputs();
+}
+
+function deleteOutputSample(outputId, sampleIdx) {
+    const list = Storage.get(Storage.KEYS.OUTPUTS, []);
+    const item = list.find(o => o.id === outputId);
+    if (!item || !Array.isArray(item.samples)) return;
+    if (!confirm(`Delete Sample #${sampleIdx + 1} from "${item.title}"?`)) return;
+
+    item.samples.splice(sampleIdx, 1);
+    item.coverImage = item.samples[0] || '';
+
+    if (item.samples.length === 0) {
+        if (confirm('No samples remaining. Delete the entire project?')) {
+            const filtered = list.filter(o => o.id !== outputId);
+            Storage.set(Storage.KEYS.OUTPUTS, filtered);
+            showToast('Project removed (no samples left).');
+            renderOutputs();
+            return;
+        }
+    }
+
+    Storage.set(Storage.KEYS.OUTPUTS, list);
+    showToast('Sample deleted.');
     renderOutputs();
 }
 
