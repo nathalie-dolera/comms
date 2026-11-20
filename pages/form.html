@@ -228,19 +228,26 @@
                             <label style="font-weight: 700; margin-bottom: 8px; display: block; font-family:'Special Elite', monospace; font-size:12.5px; text-transform:uppercase; color:var(--maroon-dark);">
                                 Payment Option:
                             </label>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                                <label id="payment-stage-dp-lbl" style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 2px solid var(--maroon); border-radius: 6px; background: #fff8f5; cursor: pointer; transition: all 0.2s;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px;">
+                                <label id="payment-stage-dp-lbl" style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 2px solid var(--maroon); border-radius: 6px; background: #fff8f5; cursor: pointer; transition: all 0.2s;">
                                     <input type="radio" name="payment-option-type" id="pay-opt-dp" value="downpayment" checked onchange="handlePaymentOptionChange('downpayment')" style="display:none;">
                                     <div>
-                                        <strong style="display: block; font-family: 'Special Elite', monospace; color: var(--maroon-dark); font-size: 13px;">Down Payment (50%)</strong>
-
+                                        <strong style="display: block; font-family: 'Special Elite', monospace; color: var(--maroon-dark); font-size: 12.5px;">Down Payment (50%)</strong>
+                                        <small id="dp-amount-hint" style="color: #7a4e4e; font-size: 11px;"></small>
                                     </div>
                                 </label>
-                                <label id="payment-stage-full-lbl" style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px dashed #d4c4b0; border-radius: 6px; background: #ffffff; cursor: pointer; transition: all 0.2s;">
+                                <label id="payment-stage-bal-lbl" style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px dashed #d4c4b0; border-radius: 6px; background: #ffffff; cursor: pointer; transition: all 0.2s;">
+                                    <input type="radio" name="payment-option-type" id="pay-opt-bal" value="balance" onchange="handlePaymentOptionChange('balance')" style="display:none;">
+                                    <div>
+                                        <strong style="display: block; font-family: 'Special Elite', monospace; color: var(--maroon-dark); font-size: 12.5px;">Pay Balance (Remaining)</strong>
+                                        <small id="bal-amount-hint" style="color: #7a4e4e; font-size: 11px;"></small>
+                                    </div>
+                                </label>
+                                <label id="payment-stage-full-lbl" style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px dashed #d4c4b0; border-radius: 6px; background: #ffffff; cursor: pointer; transition: all 0.2s;">
                                     <input type="radio" name="payment-option-type" id="pay-opt-full" value="fully_paid" onchange="handlePaymentOptionChange('fully_paid')" style="display:none;">
                                     <div>
-                                        <strong style="display: block; font-family: 'Special Elite', monospace; color: var(--maroon-dark); font-size: 13px;">Full Paid</strong>
-
+                                        <strong style="display: block; font-family: 'Special Elite', monospace; color: var(--maroon-dark); font-size: 12.5px;">Full Payment (100%)</strong>
+                                        <small id="full-amount-hint" style="color: #7a4e4e; font-size: 11px;"></small>
                                     </div>
                                 </label>
                             </div>
@@ -652,12 +659,24 @@
 
                 // Update hints & default amount
                 const dpAmount = agreed > 0 ? (agreed * 0.5) : 500;
+                const balAmount = bal > 0 ? bal : (agreed > 0 ? (agreed * 0.5) : 0);
 
+                const dpHint = document.getElementById('dp-amount-hint');
+                if (dpHint) dpHint.textContent = agreed > 0 ? `₱${dpAmount.toLocaleString()}` : '';
 
-                const amountInput = document.getElementById('payment-amount');
-                if (amountInput && !amountInput.value) {
-                    const isFullChoice = document.getElementById('pay-opt-full')?.checked;
-                    amountInput.value = isFullChoice ? (bal > 0 ? bal : agreed) : dpAmount;
+                const balHint = document.getElementById('bal-amount-hint');
+                if (balHint) balHint.textContent = balAmount > 0 ? `₱${balAmount.toLocaleString()}` : '';
+
+                const fullHint = document.getElementById('full-amount-hint');
+                if (fullHint) fullHint.textContent = agreed > 0 ? `₱${agreed.toLocaleString()}` : '';
+
+                // If commission has paid downpayment already and has balance due, auto-select "Pay Balance"
+                if (comm.paymentType === 'downpayment' || (paid > 0 && bal > 0)) {
+                    const balRadio = document.getElementById('pay-opt-bal');
+                    if (balRadio) {
+                        balRadio.checked = true;
+                        handlePaymentOptionChange('balance');
+                    }
                 }
 
                 // Unlock payment details section
@@ -748,34 +767,41 @@
         // ============================================
         function handlePaymentOptionChange(opt) {
             const dpLbl = document.getElementById('payment-stage-dp-lbl');
+            const balLbl = document.getElementById('payment-stage-bal-lbl');
             const fullLbl = document.getElementById('payment-stage-full-lbl');
             const amountInput = document.getElementById('payment-amount');
             const agreed = currentApprovedCommission ? Number(currentApprovedCommission.agreedPrice) || 0 : 0;
             const balance = currentApprovedCommission ? Number(currentApprovedCommission.balance) || 0 : 0;
 
+            const resetCard = (lbl) => {
+                if (!lbl) return;
+                lbl.style.border = '1px dashed #d4c4b0';
+                lbl.style.background = '#ffffff';
+            };
+            const activeCard = (lbl) => {
+                if (!lbl) return;
+                lbl.style.border = '2px solid var(--maroon)';
+                lbl.style.background = '#fff8f5';
+            };
+
+            resetCard(dpLbl);
+            resetCard(balLbl);
+            resetCard(fullLbl);
+
             if (opt === 'fully_paid') {
-                if (fullLbl) {
-                    fullLbl.style.border = '2px solid var(--maroon)';
-                    fullLbl.style.background = '#fff8f5';
-                }
-                if (dpLbl) {
-                    dpLbl.style.border = '1px dashed #d4c4b0';
-                    dpLbl.style.background = '#ffffff';
-                }
+                activeCard(fullLbl);
                 if (amountInput && agreed > 0) {
-                    amountInput.value = balance > 0 ? balance : agreed;
+                    amountInput.value = agreed;
+                }
+            } else if (opt === 'balance') {
+                activeCard(balLbl);
+                if (amountInput && agreed > 0) {
+                    amountInput.value = balance > 0 ? balance : Math.round(agreed * 0.5);
                 }
             } else {
-                if (dpLbl) {
-                    dpLbl.style.border = '2px solid var(--maroon)';
-                    dpLbl.style.background = '#fff8f5';
-                }
-                if (fullLbl) {
-                    fullLbl.style.border = '1px dashed #d4c4b0';
-                    fullLbl.style.background = '#ffffff';
-                }
+                activeCard(dpLbl);
                 if (amountInput && agreed > 0) {
-                    amountInput.value = (agreed * 0.5);
+                    amountInput.value = Math.round(agreed * 0.5);
                 }
             }
         }

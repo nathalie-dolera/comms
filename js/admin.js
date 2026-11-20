@@ -2977,7 +2977,7 @@ function renderPendingPaymentProofs() {
                     <div style="margin-top:4px;font-size:12px;color:#5a2e2e;">
                         <span style="font-family:'Special Elite',monospace;">${escapeHtml(proof.mode || 'GCash')}</span>
                         &bull;
-                        <span>${proof.paymentType === 'fully_paid' ? 'Full Payment' : 'Down Payment (50%)'}</span>
+                        <span>${proof.paymentType === 'fully_paid' ? 'Full Payment' : (proof.paymentType === 'balance' ? 'Pay Balance' : 'Down Payment (50%)')}</span>
                     </div>
                     <div style="font-size:11px;color:#8c5b52;margin-top:2px;">Submitted: ${new Date(proof.submittedAt).toLocaleString()}</div>
                     <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
@@ -3433,9 +3433,11 @@ function renderPaymentSheet() {
         const pct = agreed > 0 ? Math.round((amt / agreed) * 100) : 100;
         const isDP = p.paymentType === 'downpayment' && !(amt > 0 && agreed > 0 && amt >= agreed) && !(amt > 0 && bal === 0);
 
-        const typeBadge = isDP 
-            ? `<span style="background: #fdf3e7; color: #b7791f; border: 1px solid #f6e05e; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">50% DP</span>`
-            : `<span style="background: #eafaf1; color: #1e8449; border: 1px solid #a9dfbf; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">Fully Paid</span>`;
+        const typeBadge = p.paymentType === 'balance'
+            ? `<span style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">Balance</span>`
+            : (isDP 
+                ? `<span style="background: #fdf3e7; color: #b7791f; border: 1px solid #f6e05e; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">50% DP</span>`
+                : `<span style="background: #eafaf1; color: #1e8449; border: 1px solid #a9dfbf; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">Fully Paid</span>`);
 
         const hasAi = !!p.aiVerified;
         const aiBtn = hasAi 
@@ -3744,7 +3746,12 @@ function handleSavePayment(event) {
     const subIdx = subs.findIndex(s => s.name && s.name.trim().toLowerCase() === clientName.toLowerCase());
     if (subIdx !== -1) {
         subs[subIdx].payment = mode;
-        subs[subIdx].paymentType = paymentType;
+        // If payment settlement is 'balance' and balance becomes 0, mark commission as fully_paid
+        if (paymentType === 'balance' && bal === 0) {
+            subs[subIdx].paymentType = 'fully_paid';
+        } else {
+            subs[subIdx].paymentType = paymentType;
+        }
         subs[subIdx].amountPaid = amount;
         if (agreedPrice > 0) subs[subIdx].agreedPrice = agreedPrice;
         subs[subIdx].balance = bal;
@@ -3780,7 +3787,7 @@ function openViewReceiptModal(id, isProof = false) {
         const proof = Storage.get(Storage.KEYS.PAYMENT_PROOFS, []).find(p => p.id === id);
         if (!proof || !proof.receipt) { showToast('No receipt image found.'); return; }
         receipt = proof.receipt;
-        details = `${proof.clientName} • ${proof.mode || 'GCash'} • ${proof.paymentType === 'fully_paid' ? 'Full Payment' : 'Down Payment'}`;
+        details = `${proof.clientName} • ${proof.mode || 'GCash'} • ${proof.paymentType === 'fully_paid' ? 'Full Payment' : (proof.paymentType === 'balance' ? 'Pay Balance' : 'Down Payment')}`;
     } else {
         const item = Storage.get(Storage.KEYS.PAYMENTS, []).find(p => p.id === id);
         if (!item || !item.receipt) { showToast('No receipt image found for this payment.'); return; }
@@ -3809,7 +3816,7 @@ function exportPaymentsToCSV() {
         `"${(p.service || '').replace(/"/g, '""')}"`,
         p.amount || 0,
         `"${(p.mode || '').replace(/"/g, '""')}"`,
-        p.paymentType === 'fully_paid' ? 'Fully Paid' : '50% DP',
+        p.paymentType === 'fully_paid' ? 'Fully Paid' : (p.paymentType === 'balance' ? 'Balance' : '50% DP'),
         p.status || 'Confirmed',
         `"${(p.notes || '').replace(/"/g, '""')}"`
     ]);
