@@ -607,13 +607,7 @@ function renderSubmissions() {
             <td>
                 <div style="font-weight: 700; text-transform: uppercase; color: var(--maroon-dark); font-size: 13px;">${sub.payment || 'GCash'}</div>
                 <div style="margin-top: 3px;">
-                    <select class="payment-badge ${badgeClass}" 
-                            onchange="setCommissionPaymentStatus('${sub.id}', this.value)"
-                            style="cursor: pointer; outline: none; font-size: 11px; padding: 2px 6px;">
-                        <option value="unpaid" ${!hasPayment ? 'selected' : ''}>Not Paid</option>
-                        <option value="downpayment" ${hasPayment && !isFullyPaid ? 'selected' : ''}>50% DP</option>
-                        <option value="fully_paid" ${isFullyPaid ? 'selected' : ''}>Fully Paid</option>
-                    </select>
+                    <span class="payment-badge ${badgeClass}" style="font-size: 11px; padding: 2px 8px;">${paymentLabel}</span>
                 </div>
             </td>
             <td>
@@ -1005,11 +999,7 @@ function renderCommissionViewTab(sub) {
                 <div style="background: #faf4ee; padding: 12px 14px; border-radius: 6px; border: 1px solid #e2d2c2;">
                     <span style="font-size: 11px; text-transform: uppercase; font-family:'Special Elite', monospace; color: var(--maroon); font-weight: bold; display: block; margin-bottom: 6px;">Payment Status</span>
                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-                        <select class="payment-badge ${badgeClass}" onchange="setCommissionPaymentStatus('${sub.id}', this.value)" style="cursor: pointer; font-size: 12px; padding: 5px 12px; font-weight: bold; outline: none; border-radius: 12px;">
-                            <option value="unpaid" ${!hasPayment ? 'selected' : ''}>Not Paid</option>
-                            <option value="downpayment" ${hasPayment && !isFullyPaid ? 'selected' : ''}>50% DP</option>
-                            <option value="fully_paid" ${isFullyPaid ? 'selected' : ''}>Fully Paid</option>
-                        </select>
+                        <span class="payment-badge ${badgeClass}" style="font-size: 12px; padding: 5px 12px; font-weight: bold; border-radius: 12px;">${paymentLabel}</span>
                         <span style="font-size: 12px; font-weight: 600; color: #555;">via ${escapeHtml(sub.payment || 'GCash')}</span>
                     </div>
                     ${!isFullyPaid ? `
