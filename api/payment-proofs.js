@@ -19,6 +19,7 @@ module.exports = async (req, res) => {
       amount: Number(input.amount) || 0,
       paymentType: cleanString(input.paymentType || 'downpayment', 30),
       mode: cleanString(input.mode || 'GCash', 50),
+      commId: cleanString(input.commId || '', 50),
       submittedAt: new Date().toISOString(),
       status: 'pending'
     };

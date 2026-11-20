@@ -759,6 +759,19 @@ function setCommissionPaymentStatus(id, newStatus) {
             } else {
                 allPayments[payIdx].balance = 0;
             }
+
+            // Remove any other duplicate payment rows for this client
+            const clientLower = sub.name ? sub.name.trim().toLowerCase() : '';
+            const otherDupes = allPayments.filter((p, i) => i !== payIdx && (p.commId === id || (p.clientName && clientLower && p.clientName.trim().toLowerCase() === clientLower)));
+            if (otherDupes.length > 0) {
+                otherDupes.forEach(d => {
+                    if (d.receipt && d.receipt !== allPayments[payIdx].receipt) {
+                        allPayments[payIdx].balanceReceipt = d.receipt;
+                        allPayments[payIdx].receipts = [allPayments[payIdx].receipt, d.receipt].filter(Boolean);
+                    }
+                });
+                allPayments = allPayments.filter((p, i) => i === payIdx || !(p.commId === id || (p.clientName && clientLower && p.clientName.trim().toLowerCase() === clientLower)));
+            }
         } else {
             allPayments.unshift({
                 id: 'PAY-' + Date.now().toString(36).toUpperCase(),
@@ -838,6 +851,85 @@ function setCommissionPaymentStatus(id, newStatus) {
     }
 }
 
+function getCommissionReceipts(sub) {
+    if (!sub) return [];
+    const receipts = [];
+    const seen = new Set();
+
+    function add(dataUrl, defaultLabel, date, amount, mode) {
+        if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.trim()) return;
+        const key = dataUrl.length > 120 ? dataUrl.slice(0, 120) : dataUrl;
+        if (seen.has(key)) return;
+        seen.add(key);
+        receipts.push({
+            receipt: dataUrl,
+            label: defaultLabel || 'Payment Receipt',
+            date: date || '',
+            amount: Number(amount) || 0,
+            mode: mode || 'GCash'
+        });
+    }
+
+    // 1. Commission's direct fields
+    if (sub.downpaymentReceipt) {
+        add(sub.downpaymentReceipt, '50% Down Payment Receipt', sub.submittedAt, sub.amountPaid, sub.payment);
+    }
+    if (sub.balanceReceipt) {
+        add(sub.balanceReceipt, 'Balance Payment Receipt', '', sub.balance, sub.payment);
+    }
+    if (Array.isArray(sub.receipts)) {
+        sub.receipts.forEach((r, idx) => {
+            if (typeof r === 'string') add(r, `Payment Receipt #${idx + 1}`);
+            else if (r && r.receipt) add(r.receipt, r.label || `Receipt #${idx + 1}`, r.date, r.amount, r.mode);
+        });
+    }
+
+    // 2. All matching payments in Storage.KEYS.PAYMENTS
+    const allPayments = Storage.get(Storage.KEYS.PAYMENTS, []);
+    const matchingPayments = allPayments.filter(p =>
+        (p.commId && p.commId === sub.id) ||
+        (p.clientName && sub.name && p.clientName.trim().toLowerCase() === sub.name.trim().toLowerCase())
+    );
+
+    matchingPayments.forEach(p => {
+        const isDP = p.paymentType === 'downpayment';
+        const isBal = p.paymentType === 'balance';
+        const defaultLabel = isBal ? 'Balance Payment Receipt' : (isDP ? '50% Down Payment Receipt' : 'Payment Receipt');
+        if (p.receipt) add(p.receipt, defaultLabel, p.date, p.amount, p.mode);
+        if (p.balanceReceipt) add(p.balanceReceipt, 'Balance Payment Receipt', p.date, p.amount, p.mode);
+        if (Array.isArray(p.receipts)) {
+            p.receipts.forEach((rc, idx) => {
+                const str = typeof rc === 'string' ? rc : rc?.receipt;
+                const rLbl = typeof rc === 'object' && rc?.label ? rc.label : `Receipt #${idx + 1}`;
+                if (str) add(str, rLbl, p.date, p.amount, p.mode);
+            });
+        }
+    });
+
+    // 3. Any submitted payment proofs in Storage.KEYS.PAYMENT_PROOFS
+    const allProofs = Storage.get(Storage.KEYS.PAYMENT_PROOFS, []);
+    const matchingProofs = allProofs.filter(pr =>
+        (pr.commId && pr.commId === sub.id) ||
+        (pr.clientName && sub.name && pr.clientName.trim().toLowerCase() === sub.name.trim().toLowerCase())
+    );
+    matchingProofs.forEach(pr => {
+        const lbl = pr.paymentType === 'balance' ? 'Balance Payment Proof' : (pr.paymentType === 'fully_paid' ? 'Full Payment Proof' : 'Payment Proof');
+        if (pr.receipt) add(pr.receipt, lbl, pr.submittedAt, pr.amount, pr.mode);
+    });
+
+    // If 2 receipts are found, ensure clean labels: first is DP, second is Balance
+    if (receipts.length >= 2) {
+        if (!receipts[0].label.includes('Down Payment') && !receipts[0].label.includes('DP')) {
+            receipts[0].label = '50% Down Payment Receipt';
+        }
+        if (!receipts[1].label.includes('Balance')) {
+            receipts[1].label = 'Balance Payment Receipt';
+        }
+    }
+
+    return receipts;
+}
+
 function renderCommissionViewTab(sub) {
     const container = document.getElementById('tab-view-commission');
     if (!container) return;
@@ -860,6 +952,7 @@ function renderCommissionViewTab(sub) {
     }
 
     const refFiles = Array.isArray(sub.referenceFiles) ? sub.referenceFiles : [];
+    const commissionReceipts = getCommissionReceipts(sub);
 
     container.innerHTML = `
         <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
@@ -1020,27 +1113,48 @@ function renderCommissionViewTab(sub) {
                 `}
             </div>
 
-            <!-- PAYMENT PROOF SCREENSHOT -->
+            <!-- PAYMENT PROOF SCREENSHOTS -->
             <div style="margin-bottom: 22px;">
-                <label style="color: var(--maroon); font-weight: bold; font-family:'Special Elite', monospace; text-transform: uppercase; font-size: 12px; display: block; margin-bottom: 6px;">
-                    Payment Proof Receipt / Screenshot
-                </label>
-                <div style="background: #faf4ee; border: 1px dashed #dcd0c2; border-radius: 6px; padding: 12px; display: flex; align-items: center; gap: 14px;">
-                    ${sub.downpaymentReceipt ? `
-                        <div style="cursor: pointer; flex-shrink: 0;" onclick="previewReferenceImage('${sub.downpaymentReceipt}', 'Payment Proof - ${escapeHtml(sub.name)}')">
-                            <img src="${sub.downpaymentReceipt}" alt="Payment Proof" style="height: 72px; width: auto; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.12); border: 1px solid #dcd0c2; object-fit: contain;">
-                        </div>
-                        <div>
-                            <div style="font-size: 12.5px; font-weight: 600; color: var(--maroon-dark); font-family:'Special Elite', monospace;">Payment Screenshot</div>
-                            <div style="font-size: 11px; color: #7a4e4e; margin-top: 2px;">Click thumbnail to view full size</div>
-                            <a href="${sub.downpaymentReceipt}" download="payment-proof-${escapeHtml(sub.name)}.jpg" class="btn-action btn-primary" style="display: inline-block; margin-top: 6px; padding: 4px 10px; font-size: 11px; text-decoration: none; border-radius: 4px; font-family:'Special Elite', monospace;">Download</a>
-                        </div>
-                    ` : `
-                        <span style="color: #886560; font-style: italic; font-size: 13px; font-family:'Special Elite', monospace;">
-                            No payment receipt screenshot uploaded for this commission.
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                    <label style="color: var(--maroon); font-weight: bold; font-family:'Special Elite', monospace; text-transform: uppercase; font-size: 12px; margin: 0;">
+                        Payment Proof Receipts &amp; Screenshots (${commissionReceipts.length})
+                    </label>
+                    ${commissionReceipts.length > 1 ? `
+                        <span style="font-size: 11px; color: #15803d; font-weight: 700; font-family:'Special Elite', monospace; background: #eafaf1; padding: 2px 8px; border-radius: 4px; border: 1px solid #a9dfbf;">
+                            ✓ 2 Receipts (DP + Balance)
                         </span>
-                    `}
+                    ` : ''}
                 </div>
+
+                ${commissionReceipts.length === 0 ? `
+                    <div style="background: #faf4ee; border: 1px dashed #dcd0c2; border-radius: 6px; padding: 14px; text-align: center; color: #886560; font-style: italic; font-size: 13px; font-family:'Special Elite', monospace;">
+                        No payment receipt screenshot uploaded for this commission.
+                    </div>
+                ` : `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px;">
+                        ${commissionReceipts.map((rcItem, rcIdx) => `
+                            <div style="background: #ffffff; border: 1px solid #dcd0c2; border-radius: 6px; padding: 10px 12px; display: flex; align-items: center; gap: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);">
+                                <div style="cursor: pointer; flex-shrink: 0;" onclick="previewReferenceImage('${rcItem.receipt}', '${escapeHtml(rcItem.label)} - ${escapeHtml(sub.name)}')">
+                                    <img src="${rcItem.receipt}" alt="${escapeHtml(rcItem.label)}" style="height: 72px; width: auto; max-width: 80px; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.12); border: 1px solid #dcd0c2; object-fit: contain; background: #faf4ee;">
+                                </div>
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="font-size: 12px; font-weight: 700; color: var(--maroon-dark); font-family:'Special Elite', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(rcItem.label)}">
+                                        ${escapeHtml(rcItem.label)}
+                                    </div>
+                                    <div style="font-size: 11px; color: #7a4e4e; margin-top: 2px;">
+                                        ${rcItem.mode ? escapeHtml(rcItem.mode) : 'GCash'} ${rcItem.amount > 0 ? `• ${formatPHP(rcItem.amount)}` : ''}
+                                    </div>
+                                    <div style="font-size: 10.5px; color: #888; margin-top: 1px;">Click thumbnail to view full size</div>
+                                    <div style="margin-top: 6px;">
+                                        <a href="${rcItem.receipt}" download="${rcIdx === 0 ? 'dp-receipt' : 'balance-receipt'}-${escapeHtml(sub.name)}.jpg" class="btn-action btn-primary" style="display: inline-block; padding: 3px 8px; font-size: 10.5px; text-decoration: none; border-radius: 4px; font-family:'Special Elite', monospace; white-space: nowrap;">
+                                            Download
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `}
             </div>
 
             <!-- ADMIN STATUS NOTE -->
@@ -1204,17 +1318,28 @@ function _oldViewSubmissionDetail(id) {
 
         <div class="admin-form-group">
             <label style="color: var(--maroon); font-weight: bold;">
-                GCash / Payment Proof Screenshot (${paymentLabel})
+                GCash / Payment Proof Screenshots (${paymentLabel})
             </label>
             <div class="modal-detail-box" style="text-align: center; padding: 14px;">
-                ${sub.downpaymentReceipt ? `
-                    <a href="${sub.downpaymentReceipt}" target="_blank" title="Click to view full screenshot in new tab">
-                        <img src="${sub.downpaymentReceipt}" alt="Payment Proof" style="max-width: 100%; max-height: 240px; object-fit: contain; border-radius: 6px; box-shadow: 0 3px 10px rgba(0,0,0,0.15); cursor: pointer;">
-                    </a>
-                    <div style="margin-top: 8px; font-size: 11px; color: #7a4e4e;">Click image to expand in new tab</div>
-                ` : `
-                    <div style="color: #886560; font-style: italic; font-size: 13px; padding: 8px 0;">No proof screenshot attached for this submission.</div>
-                `}
+                ${(() => {
+                    const rList = getCommissionReceipts(sub);
+                    if (!rList.length) {
+                        return '<div style="color: #886560; font-style: italic; font-size: 13px; padding: 8px 0;">No proof screenshot attached for this submission.</div>';
+                    }
+                    return `
+                        <div style="display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;">
+                            ${rList.map((rc, rIdx) => `
+                                <div style="text-align: center;">
+                                    <div style="cursor: pointer;" onclick="previewReferenceImage('${rc.receipt}', '${escapeHtml(rc.label)} - ${escapeHtml(sub.name)}')">
+                                        <img src="${rc.receipt}" alt="${escapeHtml(rc.label)}" style="max-height: 180px; max-width: 140px; object-fit: contain; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.12); border: 1px solid #dcd0c2; background: #faf4ee;">
+                                    </div>
+                                    <div style="font-size: 11.5px; font-weight: bold; color: var(--maroon); margin-top: 6px; font-family:'Special Elite', monospace;">${escapeHtml(rc.label)}</div>
+                                    <a href="${rc.receipt}" download="${rIdx === 0 ? 'dp-receipt' : 'balance-receipt'}-${escapeHtml(sub.name)}.jpg" class="btn-action btn-primary" style="display: inline-block; margin-top: 4px; padding: 2px 8px; font-size: 10px; text-decoration: none; border-radius: 4px; font-family:'Special Elite', monospace;">Download</a>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                })()}
             </div>
         </div>
 
@@ -2946,7 +3071,105 @@ let paymentFilterMode = 'all';
 let paymentFilterType = 'all';
 let paymentSearchQuery = '';
 
+function consolidateDuplicatePayments() {
+    let list = Storage.get(Storage.KEYS.PAYMENTS, []);
+    if (!list || list.length < 2) return false;
+
+    let changed = false;
+    const groups = {};
+    list.forEach(p => {
+        const clientKey = (p.clientName || '').trim().toLowerCase();
+        const serviceKey = (p.service || '').trim().toLowerCase();
+        const key = `${clientKey}___${serviceKey}`;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(p);
+    });
+
+    const newList = [];
+    Object.values(groups).forEach(records => {
+        if (records.length === 1) {
+            newList.push(records[0]);
+            return;
+        }
+
+        // Multiple payment records for the exact same client and service
+        changed = true;
+        // Sort ascending by date so records[0] is oldest (DP) and last is newest (Balance)
+        records.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+        const firstRec = records[0];
+        const lastRec = records[records.length - 1];
+
+        const totalPaid = records.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+        const maxAgreed = records.reduce((max, r) => Math.max(max, Number(r.agreedPrice) || 0), 0);
+        const targetAgreed = maxAgreed > 0 ? maxAgreed : totalPaid;
+
+        // Collect all receipts
+        const allReceipts = [];
+        records.forEach(r => {
+            if (r.receipt && !allReceipts.includes(r.receipt)) allReceipts.push(r.receipt);
+            if (r.balanceReceipt && !allReceipts.includes(r.balanceReceipt)) allReceipts.push(r.balanceReceipt);
+            if (Array.isArray(r.receipts)) {
+                r.receipts.forEach(rc => {
+                    const str = typeof rc === 'string' ? rc : rc?.receipt;
+                    if (str && !allReceipts.includes(str)) allReceipts.push(str);
+                });
+            }
+        });
+
+        const isFullySettled = (totalPaid >= targetAgreed && targetAgreed > 0) || records.some(r => r.paymentType === 'fully_paid') || records.length >= 2;
+
+        const merged = {
+            ...lastRec,
+            id: firstRec.id,
+            date: lastRec.date || firstRec.date,
+            agreedPrice: targetAgreed,
+            amount: isFullySettled ? targetAgreed : totalPaid,
+            balance: isFullySettled ? 0 : Math.max(0, targetAgreed - totalPaid),
+            paymentType: isFullySettled ? 'fully_paid' : 'downpayment',
+            receipt: firstRec.receipt || allReceipts[0] || '',
+            balanceReceipt: (lastRec.receipt !== firstRec.receipt ? lastRec.receipt : (allReceipts[1] || '')),
+            receipts: allReceipts,
+            status: 'Confirmed',
+            aiVerified: true,
+            notes: records.map(r => r.notes).filter(Boolean).join(' | ') || 'Merged DP + Balance settlement'
+        };
+
+        newList.push(merged);
+    });
+
+    if (changed) {
+        // Sort newest first
+        newList.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        Storage.set(Storage.KEYS.PAYMENTS, newList);
+
+        // Also sync commissions in submissions storage
+        const subs = Storage.get(Storage.KEYS.SUBMISSIONS, []);
+        let subsChanged = false;
+        newList.forEach(p => {
+            const sIdx = subs.findIndex(s => s.name && s.name.trim().toLowerCase() === p.clientName.trim().toLowerCase());
+            if (sIdx !== -1) {
+                if (p.paymentType === 'fully_paid') {
+                    subs[sIdx].paymentType = 'fully_paid';
+                    subs[sIdx].amountPaid = p.amount;
+                    subs[sIdx].agreedPrice = p.agreedPrice;
+                    subs[sIdx].balance = 0;
+                    if (p.receipt) subs[sIdx].downpaymentReceipt = p.receipt;
+                    if (p.balanceReceipt) subs[sIdx].balanceReceipt = p.balanceReceipt;
+                    if (p.receipts && p.receipts.length) subs[sIdx].receipts = p.receipts;
+                    subsChanged = true;
+                }
+            }
+        });
+        if (subsChanged) {
+            Storage.set(Storage.KEYS.SUBMISSIONS, subs);
+        }
+    }
+    return changed;
+}
+
 function renderPaymentsTracker() {
+    consolidateDuplicatePayments();
     const payments = Storage.get(Storage.KEYS.PAYMENTS, []);
     renderPaymentStats(payments);
     renderMonthlyBarChart(payments);
@@ -3005,6 +3228,9 @@ function recordPaymentFromProof(proofId) {
     const optionSelect = document.getElementById('pay-option');
     const serviceSelect = document.getElementById('pay-service');
     const agreedInput = document.getElementById('pay-agreed-price');
+    const amountInput = document.getElementById('pay-amount');
+    const idInput = document.getElementById('pay-edit-id');
+    const detectPill = document.getElementById('pay-admin-detect-pill');
 
     if (client) client.value = proof.clientName;
     if (preview) preview.src = proof.receipt;
@@ -3012,12 +3238,17 @@ function recordPaymentFromProof(proofId) {
     tempPaymentReceipt = proof.receipt;
 
     if (modeSelect && proof.mode) modeSelect.value = proof.mode;
-    if (optionSelect && proof.paymentType) optionSelect.value = proof.paymentType;
 
-    // Auto-fetch type of service and agreed fee from client's commission
+    // Check if client has an existing commission or payment record
+    const payList = Storage.get(Storage.KEYS.PAYMENTS, []);
     const subs = Storage.get(Storage.KEYS.SUBMISSIONS, []);
     const match = (proof.commId && subs.find(s => s.id === proof.commId)) ||
                   subs.find(s => s.name && s.name.trim().toLowerCase() === proof.clientName.trim().toLowerCase());
+    const existingPay = payList.find(p => 
+        (proof.commId && p.commId === proof.commId) ||
+        (p.clientName && proof.clientName && p.clientName.trim().toLowerCase() === proof.clientName.trim().toLowerCase())
+    );
+
     if (match) {
         if (serviceSelect && match.service) {
             let optExists = Array.from(serviceSelect.options).some(o => o.value === match.service);
@@ -3029,9 +3260,43 @@ function recordPaymentFromProof(proofId) {
             }
             serviceSelect.value = match.service;
         }
-        if (agreedInput && match.agreedPrice && !agreedInput.value) {
+        if (agreedInput && match.agreedPrice) {
             agreedInput.value = match.agreedPrice;
         }
+    } else if (existingPay) {
+        if (serviceSelect && existingPay.service) serviceSelect.value = existingPay.service;
+        if (agreedInput && existingPay.agreedPrice) agreedInput.value = existingPay.agreedPrice;
+    }
+
+    // Check if this is a balance payment or settling an existing downpayment
+    const isBalanceProof = proof.paymentType === 'balance';
+    const hasPriorDP = (existingPay && (existingPay.paymentType === 'downpayment' || Number(existingPay.balance) > 0)) ||
+                       (match && (match.paymentType === 'downpayment' || Number(match.balance) > 0));
+
+    if (existingPay) {
+        if (idInput) idInput.value = existingPay.id;
+    }
+
+    if (isBalanceProof || hasPriorDP) {
+        if (optionSelect) optionSelect.value = 'fully_paid';
+        const priorAgreed = Number(existingPay?.agreedPrice) || Number(match?.agreedPrice) || 0;
+        const priorPaid = Number(existingPay?.amount) || Number(match?.amountPaid) || 0;
+        const remainingDue = priorAgreed > 0 ? Math.max(0, priorAgreed - priorPaid) : (proof.amount || 0);
+
+        if (amountInput) {
+            amountInput.value = remainingDue > 0 ? remainingDue : (proof.amount || '');
+        }
+
+        if (detectPill) {
+            detectPill.style.display = 'block';
+            detectPill.style.background = '#eafaf1';
+            detectPill.style.borderColor = '#a9dfbf';
+            detectPill.style.color = '#1e8449';
+            detectPill.innerHTML = `Auto-Detected: Balance Payment for ${escapeHtml(proof.clientName)} → Updating existing record to Fully Paid (100% Settled)`;
+        }
+    } else {
+        if (optionSelect && proof.paymentType) optionSelect.value = proof.paymentType;
+        if (amountInput && proof.amount > 0) amountInput.value = proof.amount;
     }
 }
 
@@ -3698,42 +3963,100 @@ function handleSavePayment(event) {
     const status = document.getElementById('pay-status')?.value || 'Confirmed';
     const notes = document.getElementById('pay-notes')?.value.trim() || '';
 
-    const list = Storage.get(Storage.KEYS.PAYMENTS, []);
-    const bal = Math.max(0, (agreedPrice || amount) - amount);
+    let list = Storage.get(Storage.KEYS.PAYMENTS, []);
+    const clientLower = clientName.toLowerCase();
+    const serviceLower = service.toLowerCase();
 
+    // Check if an existing payment entry exists for this client & service
+    let matchIdx = -1;
     if (idInput) {
-        // Edit existing
-        const idx = list.findIndex(p => p.id === idInput);
-        if (idx !== -1) {
-            list[idx].clientName = clientName;
-            list[idx].date = date;
-            list[idx].service = service;
-            list[idx].agreedPrice = agreedPrice || amount;
-            list[idx].amount = amount;
-            list[idx].balance = bal;
-            list[idx].mode = mode;
-            list[idx].paymentType = paymentType;
-            list[idx].status = status;
-            list[idx].notes = notes;
-            if (tempPaymentReceipt) list[idx].receipt = tempPaymentReceipt;
-            showToast('Payment entry updated!');
+        matchIdx = list.findIndex(p => p.id === idInput);
+    }
+    if (matchIdx === -1 && clientName) {
+        matchIdx = list.findIndex(p =>
+            p.clientName && p.clientName.trim().toLowerCase() === clientLower &&
+            (!service || !p.service || p.service.trim().toLowerCase() === serviceLower)
+        );
+    }
+
+    let finalAmount = amount;
+    let finalAgreed = agreedPrice || amount;
+    let finalBal = 0;
+    let finalPaymentType = paymentType;
+
+    if (matchIdx !== -1) {
+        // Update existing record (prevent duplicate rows for the same client & service)
+        const existing = list[matchIdx];
+        finalAgreed = agreedPrice || existing.agreedPrice || (amount * 2);
+
+        if (paymentType === 'balance') {
+            const prevAmount = Number(existing.amount) || 0;
+            finalAmount = (amount >= finalAgreed && finalAgreed > 0) ? amount : (prevAmount + amount);
+            if (finalAgreed > 0) finalAmount = Math.min(finalAgreed, finalAmount);
+            finalBal = Math.max(0, finalAgreed - finalAmount);
+            finalPaymentType = finalBal === 0 ? 'fully_paid' : 'balance';
+        } else if (paymentType === 'fully_paid') {
+            finalAmount = finalAgreed > 0 ? finalAgreed : Math.max(amount, (Number(existing.amount) || 0) + amount);
+            finalBal = 0;
+            finalPaymentType = 'fully_paid';
+        } else {
+            // downpayment or other
+            finalAmount = amount;
+            finalBal = Math.max(0, finalAgreed - finalAmount);
+            finalPaymentType = paymentType;
         }
+
+        // Manage receipts on payment record
+        const oldReceipt = existing.receipt;
+        if (tempPaymentReceipt && oldReceipt && tempPaymentReceipt !== oldReceipt) {
+            existing.balanceReceipt = tempPaymentReceipt;
+            existing.receipts = [oldReceipt, tempPaymentReceipt].filter(Boolean);
+        } else if (tempPaymentReceipt) {
+            existing.receipt = tempPaymentReceipt;
+            existing.receipts = [tempPaymentReceipt];
+        }
+
+        existing.clientName = clientName;
+        existing.date = date;
+        existing.service = service;
+        existing.agreedPrice = finalAgreed;
+        existing.amount = finalAmount;
+        existing.balance = finalBal;
+        existing.mode = mode;
+        existing.paymentType = finalPaymentType;
+        existing.status = status;
+        if (notes) {
+            existing.notes = existing.notes ? `${existing.notes} | ${notes}` : notes;
+        } else if (finalPaymentType === 'fully_paid' && !existing.notes) {
+            existing.notes = 'Balance settled & fully paid';
+        }
+
+        // Remove any other duplicate payment rows for this client & service
+        list = list.filter((p, i) => i === matchIdx || !(
+            p.clientName && p.clientName.trim().toLowerCase() === clientLower &&
+            (!service || !p.service || p.service.trim().toLowerCase() === serviceLower)
+        ));
+
+        showToast(`Payment entry for ${clientName} updated to ${finalPaymentType === 'fully_paid' ? 'Fully Paid' : 'Balance Paid'}!`);
     } else {
-        // Create new
+        // Create new record
+        finalBal = Math.max(0, (agreedPrice || amount) - amount);
+        finalPaymentType = (paymentType === 'balance' && finalBal === 0) ? 'fully_paid' : paymentType;
         const newId = 'PAY-' + (1000 + list.length + 1);
         list.unshift({
             id: newId,
             clientName,
             date,
             service,
-            agreedPrice: agreedPrice || amount,
-            amount,
-            balance: bal,
+            agreedPrice: finalAgreed,
+            amount: finalAmount,
+            balance: finalBal,
             mode,
-            paymentType,
+            paymentType: finalPaymentType,
             status,
             notes,
             receipt: tempPaymentReceipt,
+            receipts: tempPaymentReceipt ? [tempPaymentReceipt] : [],
             aiVerified: true
         });
         showToast('Payment entry recorded!');
@@ -3743,19 +4066,22 @@ function handleSavePayment(event) {
 
     // Sync payment details back to the client's commission
     const subs = Storage.get(Storage.KEYS.SUBMISSIONS, []);
-    const subIdx = subs.findIndex(s => s.name && s.name.trim().toLowerCase() === clientName.toLowerCase());
+    const subIdx = subs.findIndex(s => s.name && s.name.trim().toLowerCase() === clientLower);
     if (subIdx !== -1) {
         subs[subIdx].payment = mode;
-        // If payment settlement is 'balance' and balance becomes 0, mark commission as fully_paid
-        if (paymentType === 'balance' && bal === 0) {
-            subs[subIdx].paymentType = 'fully_paid';
-        } else {
-            subs[subIdx].paymentType = paymentType;
+        subs[subIdx].paymentType = finalPaymentType;
+        subs[subIdx].amountPaid = finalAmount;
+        if (finalAgreed > 0) subs[subIdx].agreedPrice = finalAgreed;
+        subs[subIdx].balance = finalBal;
+
+        if (tempPaymentReceipt) {
+            if (subs[subIdx].downpaymentReceipt && subs[subIdx].downpaymentReceipt !== tempPaymentReceipt) {
+                subs[subIdx].balanceReceipt = tempPaymentReceipt;
+            } else if (!subs[subIdx].downpaymentReceipt) {
+                subs[subIdx].downpaymentReceipt = tempPaymentReceipt;
+            }
+            subs[subIdx].receipts = [subs[subIdx].downpaymentReceipt, subs[subIdx].balanceReceipt].filter(Boolean);
         }
-        subs[subIdx].amountPaid = amount;
-        if (agreedPrice > 0) subs[subIdx].agreedPrice = agreedPrice;
-        subs[subIdx].balance = bal;
-        if (tempPaymentReceipt) subs[subIdx].downpaymentReceipt = tempPaymentReceipt;
         Storage.set(Storage.KEYS.SUBMISSIONS, subs);
         renderSubmissions();
     }
@@ -3783,21 +4109,55 @@ function deletePayment(id) {
 
 function openViewReceiptModal(id, isProof = false) {
     let receipt, details;
+    const detailsEl = document.getElementById('view-receipt-details');
+    const imgEl = document.getElementById('view-receipt-img');
+
     if (isProof) {
         const proof = Storage.get(Storage.KEYS.PAYMENT_PROOFS, []).find(p => p.id === id);
         if (!proof || !proof.receipt) { showToast('No receipt image found.'); return; }
         receipt = proof.receipt;
         details = `${proof.clientName} • ${proof.mode || 'GCash'} • ${proof.paymentType === 'fully_paid' ? 'Full Payment' : (proof.paymentType === 'balance' ? 'Pay Balance' : 'Down Payment')}`;
+        if (detailsEl) detailsEl.textContent = details;
+        if (imgEl) imgEl.src = receipt;
     } else {
         const item = Storage.get(Storage.KEYS.PAYMENTS, []).find(p => p.id === id);
-        if (!item || !item.receipt) { showToast('No receipt image found for this payment.'); return; }
-        receipt = item.receipt;
-        details = `${item.clientName} • ${formatPHP(item.amount)} via ${item.mode} (${item.date || ''})`;
+        if (!item || (!item.receipt && !item.balanceReceipt)) { showToast('No receipt image found for this payment.'); return; }
+
+        const rList = [];
+        if (item.receipt) rList.push({ src: item.receipt, label: '50% Down Payment Receipt' });
+        if (item.balanceReceipt && item.balanceReceipt !== item.receipt) {
+            rList.push({ src: item.balanceReceipt, label: 'Balance Payment Receipt' });
+        }
+        if (Array.isArray(item.receipts)) {
+            item.receipts.forEach((rc, i) => {
+                const src = typeof rc === 'string' ? rc : rc?.receipt;
+                if (src && !rList.some(x => x.src === src)) {
+                    rList.push({ src, label: `Receipt #${i + 1}` });
+                }
+            });
+        }
+
+        if (rList.length > 1) {
+            if (detailsEl) {
+                detailsEl.innerHTML = `
+                    <div style="font-weight:700; margin-bottom: 6px;">${escapeHtml(item.clientName)} • ${formatPHP(item.amount)} via ${escapeHtml(item.mode)}</div>
+                    <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+                        ${rList.map((r, i) => `
+                            <button type="button" class="btn-action ${i === 0 ? 'btn-primary' : 'btn-secondary'}" style="font-size:11px; padding:3px 10px; font-family:'Special Elite', monospace;" onclick="document.getElementById('view-receipt-img').src='${r.src}'; this.parentElement.querySelectorAll('button').forEach(b => { b.className='btn-action btn-secondary'; b.style.fontFamily='Special Elite, monospace'; }); this.className='btn-action btn-primary'; this.style.fontFamily='Special Elite, monospace';">
+                                ${escapeHtml(r.label)}
+                            </button>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            if (imgEl) imgEl.src = rList[0].src;
+        } else {
+            receipt = item.receipt || item.balanceReceipt;
+            details = `${item.clientName} • ${formatPHP(item.amount)} via ${item.mode} (${item.date || ''})`;
+            if (detailsEl) detailsEl.textContent = details;
+            if (imgEl) imgEl.src = receipt;
+        }
     }
-    const detailsEl = document.getElementById('view-receipt-details');
-    const imgEl = document.getElementById('view-receipt-img');
-    if (detailsEl) detailsEl.textContent = details;
-    if (imgEl) imgEl.src = receipt;
     openModal('modal-view-receipt');
 }
 
