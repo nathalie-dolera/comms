@@ -3641,11 +3641,6 @@ function renderPaymentSheet() {
                 ? `<span style="background: #fdf3e7; color: #b7791f; border: 1px solid #f6e05e; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">50% DP</span>`
                 : `<span style="background: #eafaf1; color: #1e8449; border: 1px solid #a9dfbf; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">Fully Paid</span>`);
 
-        const hasAi = !!p.aiVerified;
-        const aiBtn = hasAi 
-            ? `<button type="button" class="btn-action" onclick="showAiDoubleCheckModal('${p.id}')" style="background: #eafaf1; color: #1e8449; border: 1px solid #a9dfbf; padding: 3px 8px; border-radius: 10px; font-size: 10.5px; font-weight: 600; white-space: nowrap; font-family:'Special Elite', monospace;">AI: Verified</button>`
-            : `<button type="button" class="btn-action" onclick="showAiDoubleCheckModal('${p.id}')" style="background: #fef7ea; color: #b45309; border: 1px solid #fde68a; padding: 3px 8px; border-radius: 10px; font-size: 10.5px; font-weight: 600; white-space: nowrap; font-family:'Special Elite', monospace;">Run AI Check</button>`;
-
         return `
             <tr>
                 <td class="sheet-row-num">${index + 1}</td>
@@ -3663,7 +3658,6 @@ function renderPaymentSheet() {
                     </span>
                 </td>
                 <td>${typeBadge}</td>
-                <td style="text-align: center;">${aiBtn}</td>
                 <td style="text-align: center;">
                     ${p.receipt ? `
                         <button type="button" onclick="openViewReceiptModal('${p.id}')" class="btn-action btn-secondary" style="padding: 2px 8px; font-size: 11px;">Proof</button>
