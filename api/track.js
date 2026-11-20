@@ -28,10 +28,12 @@ module.exports = async (req, res) => {
     const allPayments = Array.isArray(payRow?.value) ? payRow.value : [];
 
     const safeList = matches.map(submission => {
-      // Find most recent matching payment by commId or client name
+      // Find most recent matching payment by commId or client name + service
       const matchedPay = allPayments.find(p => p.commId === submission.id) ||
         allPayments.find(p => p.clientName && submission.name &&
-          p.clientName.trim().toLowerCase() === submission.name.trim().toLowerCase());
+          p.clientName.trim().toLowerCase() === submission.name.trim().toLowerCase() &&
+          p.service && submission.service &&
+          p.service.trim().toLowerCase() === submission.service.trim().toLowerCase());
 
       const resolvedAmountPaid = Number(matchedPay?.amount) || Number(submission.amountPaid) || 0;
       const resolvedAgreedPrice = Number(matchedPay?.agreedPrice) || Number(submission.agreedPrice) || 0;

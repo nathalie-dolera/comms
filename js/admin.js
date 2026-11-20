@@ -558,6 +558,29 @@ function syncStatCardsHighlight() {
     if (activeStatusCardFilter === 'Turned Over') document.getElementById('card-filter-turned')?.classList.add('active-filter');
 }
 
+// Helper: find matching payment for a commission, cross-checking BOTH clientName AND service
+function findMatchingPayment(sub, allPayments) {
+    if (!sub || !allPayments || !allPayments.length) return null;
+    // 1. Exact commId match (most reliable)
+    if (sub.id) {
+        const byCommId = allPayments.find(p => p.commId === sub.id);
+        if (byCommId) return byCommId;
+    }
+    // 2. Match by clientName AND service
+    const subName = (sub.name || '').trim().toLowerCase();
+    const subService = (sub.service || '').trim().toLowerCase();
+    if (!subName) return null;
+    if (subService) {
+        const byNameAndService = allPayments.find(p =>
+            p.clientName && p.clientName.trim().toLowerCase() === subName &&
+            p.service && p.service.trim().toLowerCase() === subService
+        );
+        if (byNameAndService) return byNameAndService;
+    }
+    // 3. DO NOT fall back to name-only match — prevents cross-contamination
+    return null;
+}
+
 function renderSubmissions() {
     const filter = document.getElementById('filter-status')?.value || activeStatusCardFilter || 'all';
     let submissions = Storage.get(Storage.KEYS.SUBMISSIONS, []);
@@ -579,9 +602,8 @@ function renderSubmissions() {
     const allPayments = Storage.get(Storage.KEYS.PAYMENTS, []);
 
     tbody.innerHTML = submissions.map(sub => {
-        // Look up latest matching payment record for this commission
-        const matchedPayment = allPayments.find(p => p.commId === sub.id) ||
-            allPayments.find(p => p.clientName && sub.name && p.clientName.trim().toLowerCase() === sub.name.trim().toLowerCase());
+        // Look up latest matching payment record for this commission (cross-check service!)
+        const matchedPayment = findMatchingPayment(sub, allPayments);
         const paidAmt = Number(matchedPayment?.amount) || Number(sub.amountPaid) || 0;
         const agreedAmt = Number(matchedPayment?.agreedPrice) || Number(sub.agreedPrice) || 0;
         const balAmt = matchedPayment ? (Number(matchedPayment.balance) || Math.max(0, agreedAmt - paidAmt)) : (Number(sub.balance) || Math.max(0, agreedAmt - paidAmt));
@@ -725,7 +747,10 @@ function setCommissionPaymentStatus(id, newStatus) {
     const allPayments = Storage.get(Storage.KEYS.PAYMENTS, []);
     let payIdx = allPayments.findIndex(p => p.commId === id);
     if (payIdx === -1 && sub.name) {
-        payIdx = allPayments.findIndex(p => p.clientName && p.clientName.trim().toLowerCase() === sub.name.trim().toLowerCase());
+        const subNameL = sub.name.trim().toLowerCase();
+        const subServiceL = (sub.service || '').trim().toLowerCase();
+        payIdx = allPayments.findIndex(p => p.clientName && p.clientName.trim().toLowerCase() === subNameL &&
+            (!subServiceL || !p.service || p.service.trim().toLowerCase() === subServiceL));
     }
 
     const agreedAmt = Number(sub.agreedPrice) || (payIdx !== -1 ? Number(allPayments[payIdx].agreedPrice) : (Number(sub.amountPaid) || 0));
@@ -757,9 +782,10 @@ function setCommissionPaymentStatus(id, newStatus) {
                 allPayments[payIdx].balance = 0;
             }
 
-            // Remove any other duplicate payment rows for this client
+            // Remove any other duplicate payment rows for this client & service
             const clientLower = sub.name ? sub.name.trim().toLowerCase() : '';
-            const otherDupes = allPayments.filter((p, i) => i !== payIdx && (p.commId === id || (p.clientName && clientLower && p.clientName.trim().toLowerCase() === clientLower)));
+            const serviceLower = sub.service ? sub.service.trim().toLowerCase() : '';
+            const otherDupes = allPayments.filter((p, i) => i !== payIdx && (p.commId === id || (p.clientName && clientLower && p.clientName.trim().toLowerCase() === clientLower && (!serviceLower || !p.service || p.service.trim().toLowerCase() === serviceLower))));
             if (otherDupes.length > 0) {
                 otherDupes.forEach(d => {
                     if (d.receipt && d.receipt !== allPayments[payIdx].receipt) {
@@ -767,7 +793,7 @@ function setCommissionPaymentStatus(id, newStatus) {
                         allPayments[payIdx].receipts = [allPayments[payIdx].receipt, d.receipt].filter(Boolean);
                     }
                 });
-                allPayments = allPayments.filter((p, i) => i === payIdx || !(p.commId === id || (p.clientName && clientLower && p.clientName.trim().toLowerCase() === clientLower)));
+                allPayments = allPayments.filter((p, i) => i === payIdx || !(p.commId === id || (p.clientName && clientLower && p.clientName.trim().toLowerCase() === clientLower && (!serviceLower || !p.service || p.service.trim().toLowerCase() === serviceLower))));
             }
         } else {
             allPayments.unshift({
@@ -885,7 +911,8 @@ function getCommissionReceipts(sub) {
     const allPayments = Storage.get(Storage.KEYS.PAYMENTS, []);
     const matchingPayments = allPayments.filter(p =>
         (p.commId && p.commId === sub.id) ||
-        (p.clientName && sub.name && p.clientName.trim().toLowerCase() === sub.name.trim().toLowerCase())
+        (p.clientName && sub.name && p.clientName.trim().toLowerCase() === sub.name.trim().toLowerCase() &&
+         p.service && sub.service && p.service.trim().toLowerCase() === sub.service.trim().toLowerCase())
     );
 
     matchingPayments.forEach(p => {
@@ -932,8 +959,7 @@ function renderCommissionViewTab(sub) {
     if (!container) return;
 
     const allPayments = Storage.get(Storage.KEYS.PAYMENTS, []);
-    const matchedPayment = allPayments.find(p => p.commId === sub.id) ||
-        allPayments.find(p => p.clientName && sub.name && p.clientName.trim().toLowerCase() === sub.name.trim().toLowerCase());
+    const matchedPayment = findMatchingPayment(sub, allPayments);
     const paidAmt = Number(matchedPayment?.amount) || Number(sub.amountPaid) || 0;
     const agreedAmt = Number(matchedPayment?.agreedPrice) || Number(sub.agreedPrice) || 0;
     const balAmt = matchedPayment ? (Number(matchedPayment.balance) || Math.max(0, agreedAmt - paidAmt)) : (Number(sub.balance) || Math.max(0, agreedAmt - paidAmt));
@@ -1131,8 +1157,7 @@ function _oldViewSubmissionDetail(id) {
 
     // Cross-reference payments tracker for real payment status
     const detPayments = Storage.get(Storage.KEYS.PAYMENTS, []);
-    const detMatchedPay = detPayments.find(p => p.commId === sub.id) ||
-        detPayments.find(p => p.clientName && sub.name && p.clientName.trim().toLowerCase() === sub.name.trim().toLowerCase());
+    const detMatchedPay = findMatchingPayment(sub, detPayments);
     const detPaidAmt = Number(detMatchedPay?.amount) || Number(sub.amountPaid) || 0;
     const detAgreedAmt = Number(detMatchedPay?.agreedPrice) || Number(sub.agreedPrice) || 0;
     const detBalAmt = detMatchedPay ? (Number(detMatchedPay.balance) || Math.max(0, detAgreedAmt - detPaidAmt)) : (Number(sub.balance) || Math.max(0, detAgreedAmt - detPaidAmt));
@@ -3118,7 +3143,8 @@ function consolidateDuplicatePayments() {
         const subs = Storage.get(Storage.KEYS.SUBMISSIONS, []);
         let subsChanged = false;
         newList.forEach(p => {
-            const sIdx = subs.findIndex(s => s.name && s.name.trim().toLowerCase() === p.clientName.trim().toLowerCase());
+            const sIdx = subs.findIndex(s => s.name && s.name.trim().toLowerCase() === p.clientName.trim().toLowerCase() &&
+                (!p.service || !s.service || s.service.trim().toLowerCase() === p.service.trim().toLowerCase()));
             if (sIdx !== -1) {
                 if (p.paymentType === 'fully_paid') {
                     subs[sIdx].paymentType = 'fully_paid';
@@ -3214,10 +3240,12 @@ function recordPaymentFromProof(proofId) {
     const payList = Storage.get(Storage.KEYS.PAYMENTS, []);
     const subs = Storage.get(Storage.KEYS.SUBMISSIONS, []);
     const match = (proof.commId && subs.find(s => s.id === proof.commId)) ||
-                  subs.find(s => s.name && s.name.trim().toLowerCase() === proof.clientName.trim().toLowerCase());
+                  subs.find(s => s.name && s.name.trim().toLowerCase() === proof.clientName.trim().toLowerCase() &&
+                      (!proof.service || !s.service || s.service.trim().toLowerCase() === proof.service.trim().toLowerCase()));
     const existingPay = payList.find(p => 
         (proof.commId && p.commId === proof.commId) ||
-        (p.clientName && proof.clientName && p.clientName.trim().toLowerCase() === proof.clientName.trim().toLowerCase())
+        (p.clientName && proof.clientName && p.clientName.trim().toLowerCase() === proof.clientName.trim().toLowerCase() &&
+         (!proof.service || !p.service || p.service.trim().toLowerCase() === proof.service.trim().toLowerCase()))
     );
 
     if (match) {
