@@ -586,13 +586,16 @@ function renderSubmissions() {
         const agreedAmt = Number(matchedPayment?.agreedPrice) || Number(sub.agreedPrice) || 0;
         const balAmt = matchedPayment ? (Number(matchedPayment.balance) || Math.max(0, agreedAmt - paidAmt)) : (Number(sub.balance) || Math.max(0, agreedAmt - paidAmt));
         const resolvedPaymentType = matchedPayment?.paymentType || sub.paymentType;
-        const isFullyPaid = resolvedPaymentType === 'fully_paid' || (paidAmt > 0 && agreedAmt > 0 && paidAmt >= agreedAmt) || (paidAmt > 0 && balAmt === 0);
-        const hasPayment = isFullyPaid || paidAmt > 0 || !!sub.downpaymentReceipt || resolvedPaymentType === 'downpayment' || (matchedPayment && (matchedPayment.status === 'Confirmed' || matchedPayment.status === 'Submitted'));
+        const isFullyPaid = paidAmt > 0 && ((agreedAmt > 0 && paidAmt >= agreedAmt) || balAmt === 0 || resolvedPaymentType === 'fully_paid');
+        const hasDownpayment = !isFullyPaid && (paidAmt > 0 || !!sub.downpaymentReceipt || (resolvedPaymentType === 'downpayment' && paidAmt > 0));
         let paymentLabel = 'Not Paid';
         let badgeClass = 'badge-unpaid';
-        if (hasPayment) {
-            paymentLabel = isFullyPaid ? 'Fully Paid' : '50% DP';
-            badgeClass = isFullyPaid ? 'badge-fully-paid' : 'badge-downpayment';
+        if (isFullyPaid) {
+            paymentLabel = 'Fully Paid';
+            badgeClass = 'badge-fully-paid';
+        } else if (hasDownpayment) {
+            paymentLabel = '50% DP';
+            badgeClass = 'badge-downpayment';
         }
         const isPending = !sub.status || sub.status === 'Pending';
 
@@ -935,14 +938,17 @@ function renderCommissionViewTab(sub) {
     const agreedAmt = Number(matchedPayment?.agreedPrice) || Number(sub.agreedPrice) || 0;
     const balAmt = matchedPayment ? (Number(matchedPayment.balance) || Math.max(0, agreedAmt - paidAmt)) : (Number(sub.balance) || Math.max(0, agreedAmt - paidAmt));
     const resolvedPaymentType = matchedPayment?.paymentType || sub.paymentType;
-    const isFullyPaid = resolvedPaymentType === 'fully_paid' || (paidAmt > 0 && agreedAmt > 0 && paidAmt >= agreedAmt) || (paidAmt > 0 && balAmt === 0);
-    const hasPayment = isFullyPaid || paidAmt > 0 || !!sub.downpaymentReceipt || resolvedPaymentType === 'downpayment' || (matchedPayment && (matchedPayment.status === 'Confirmed' || matchedPayment.status === 'Submitted'));
+    const isFullyPaid = paidAmt > 0 && ((agreedAmt > 0 && paidAmt >= agreedAmt) || balAmt === 0 || resolvedPaymentType === 'fully_paid');
+    const hasDownpayment = !isFullyPaid && (paidAmt > 0 || !!sub.downpaymentReceipt || (resolvedPaymentType === 'downpayment' && paidAmt > 0));
 
     let paymentLabel = 'Not Paid';
     let badgeClass = 'badge-unpaid';
-    if (hasPayment) {
-        paymentLabel = isFullyPaid ? 'Fully Paid' : '50% DP';
-        badgeClass = isFullyPaid ? 'badge-fully-paid' : 'badge-downpayment';
+    if (isFullyPaid) {
+        paymentLabel = 'Fully Paid';
+        badgeClass = 'badge-fully-paid';
+    } else if (hasDownpayment) {
+        paymentLabel = '50% DP';
+        badgeClass = 'badge-downpayment';
     }
 
     const refFiles = Array.isArray(sub.referenceFiles) ? sub.referenceFiles : [];
@@ -1131,13 +1137,16 @@ function _oldViewSubmissionDetail(id) {
     const detAgreedAmt = Number(detMatchedPay?.agreedPrice) || Number(sub.agreedPrice) || 0;
     const detBalAmt = detMatchedPay ? (Number(detMatchedPay.balance) || Math.max(0, detAgreedAmt - detPaidAmt)) : (Number(sub.balance) || Math.max(0, detAgreedAmt - detPaidAmt));
     const detResolvedType = detMatchedPay?.paymentType || sub.paymentType;
-    const isFullyPaid = detResolvedType === 'fully_paid' || (detPaidAmt > 0 && detAgreedAmt > 0 && detPaidAmt >= detAgreedAmt) || (detPaidAmt > 0 && detBalAmt === 0);
-    const detHasPayment = detPaidAmt > 0 || !!sub.downpaymentReceipt || (detMatchedPay && (detMatchedPay.status === 'Confirmed' || detMatchedPay.status === 'Submitted'));
+    const isFullyPaid = detPaidAmt > 0 && ((detAgreedAmt > 0 && detPaidAmt >= detAgreedAmt) || detBalAmt === 0 || detResolvedType === 'fully_paid');
+    const hasDownpayment = !isFullyPaid && (detPaidAmt > 0 || !!sub.downpaymentReceipt || (detResolvedType === 'downpayment' && detPaidAmt > 0));
     let paymentLabel = 'Not Paid';
     let badgeClass = 'badge-unpaid';
-    if (detHasPayment) {
-        paymentLabel = isFullyPaid ? 'Fully Paid' : '50% DP';
-        badgeClass = isFullyPaid ? 'badge-fully-paid' : 'badge-downpayment';
+    if (isFullyPaid) {
+        paymentLabel = 'Fully Paid';
+        badgeClass = 'badge-fully-paid';
+    } else if (hasDownpayment) {
+        paymentLabel = '50% DP';
+        badgeClass = 'badge-downpayment';
     }
 
     container.innerHTML = `
@@ -1324,6 +1333,11 @@ function editSubmissionFromView(id) {
         </div>
 
         <div class="admin-form-group">
+            <label>Agreed Project Price (₱)</label>
+            <input type="number" id="edit-sub-agreed-price" value="${sub.agreedPrice || ''}" placeholder="e.g. 500" min="0" step="any">
+        </div>
+
+        <div class="admin-form-group">
             <label>Target Deadline</label>
             <input type="date" id="edit-sub-deadline" value="${sub.deadline || ''}">
         </div>
@@ -1353,12 +1367,23 @@ function saveSubmissionEdits(id) {
 
     const newStatus = document.getElementById('edit-sub-status')?.value || list[idx].status;
     const newService = document.getElementById('edit-sub-service')?.value.trim() || list[idx].service;
+    const newAgreed = parseFloat(document.getElementById('edit-sub-agreed-price')?.value) || 0;
     const newDeadline = document.getElementById('edit-sub-deadline')?.value || list[idx].deadline;
     const newDescription = document.getElementById('edit-sub-description')?.value.trim() || list[idx].description;
     const newAdminNote = document.getElementById('edit-sub-admin-note')?.value.trim() || '';
 
     list[idx].status = newStatus;
     list[idx].service = newService;
+    list[idx].agreedPrice = newAgreed;
+    const curPaid = Number(list[idx].amountPaid) || 0;
+    list[idx].balance = Math.max(0, newAgreed - curPaid);
+    if (curPaid <= 0) {
+        list[idx].paymentType = 'unpaid';
+    } else if (newAgreed > 0 && curPaid >= newAgreed) {
+        list[idx].paymentType = 'fully_paid';
+    } else if (curPaid > 0) {
+        list[idx].paymentType = 'downpayment';
+    }
     list[idx].deadline = newDeadline;
     list[idx].description = newDescription;
     if (newStatus === 'Done' || newStatus === 'Turned Over') {
@@ -1469,7 +1494,7 @@ function openAddCommissionModal() {
     document.getElementById('comm-desc').value = '';
     document.getElementById('comm-deadline').value = '';
     const ptSelect = document.getElementById('comm-payment-type');
-    if (ptSelect) ptSelect.value = 'downpayment';
+    if (ptSelect) ptSelect.value = 'unpaid';
     const paySelect = document.getElementById('comm-payment');
     if (paySelect) paySelect.value = 'gcash';
     const otherInput = document.getElementById('comm-payment-other');
@@ -1499,7 +1524,14 @@ function handleSaveCommission(event) {
     const agreedPrice = parseFloat(document.getElementById('comm-agreed-price')?.value) || 0;
     const amountPaid = parseFloat(document.getElementById('comm-amount-paid')?.value) || 0;
     const balanceDue = Math.max(0, agreedPrice - amountPaid);
-    const payType = document.getElementById('comm-payment-type')?.value || (amountPaid >= agreedPrice && agreedPrice > 0 ? 'fully_paid' : 'downpayment');
+    let payType = document.getElementById('comm-payment-type')?.value;
+    if (amountPaid <= 0) {
+        payType = 'unpaid';
+    } else if (agreedPrice > 0 && amountPaid >= agreedPrice) {
+        payType = 'fully_paid';
+    } else if (!payType || payType === 'unpaid') {
+        payType = 'downpayment';
+    }
 
     const newSub = {
         id: newId,
@@ -1557,7 +1589,9 @@ function handleAdminCommPriceChange() {
     const paid = parseFloat(document.getElementById('comm-amount-paid')?.value) || 0;
     const ptSelect = document.getElementById('comm-payment-type');
     if (!ptSelect) return;
-    if (agreed > 0 && paid >= agreed) {
+    if (paid <= 0) {
+        ptSelect.value = 'unpaid';
+    } else if (agreed > 0 && paid >= agreed) {
         ptSelect.value = 'fully_paid';
     } else {
         ptSelect.value = 'downpayment';
@@ -3054,7 +3088,7 @@ function consolidateDuplicatePayments() {
             }
         });
 
-        const isFullySettled = (totalPaid >= targetAgreed && targetAgreed > 0) || records.some(r => r.paymentType === 'fully_paid') || records.length >= 2;
+        const isFullySettled = totalPaid > 0 && ((totalPaid >= targetAgreed && targetAgreed > 0) || records.some(r => r.paymentType === 'fully_paid' && Number(r.amount) > 0));
 
         const merged = {
             ...lastRec,
@@ -3063,7 +3097,7 @@ function consolidateDuplicatePayments() {
             agreedPrice: targetAgreed,
             amount: isFullySettled ? targetAgreed : totalPaid,
             balance: isFullySettled ? 0 : Math.max(0, targetAgreed - totalPaid),
-            paymentType: isFullySettled ? 'fully_paid' : 'downpayment',
+            paymentType: isFullySettled ? 'fully_paid' : (totalPaid > 0 ? 'downpayment' : 'unpaid'),
             receipt: firstRec.receipt || allReceipts[0] || '',
             balanceReceipt: (lastRec.receipt !== firstRec.receipt ? lastRec.receipt : (allReceipts[1] || '')),
             receipts: allReceipts,
@@ -3788,6 +3822,12 @@ function handleAdminPayPriceDetect() {
         pill.style.color = '#b45309';
         pill.innerHTML = `Auto-Detected: Downpayment (${pct}%) — Balance: ₱${bal.toLocaleString()}`;
         if (opt) opt.value = 'downpayment';
+    } else if (agreed > 0 && paid <= 0) {
+        pill.style.background = '#faf4ee';
+        pill.style.borderColor = '#dcd0c2';
+        pill.style.color = '#886560';
+        pill.innerHTML = `Not Paid (₱${agreed.toLocaleString()} due)`;
+        if (opt) opt.value = 'unpaid';
     } else {
         pill.style.display = 'none';
     }
@@ -3850,7 +3890,7 @@ function openRecordPaymentModal(editId = null, proofSubmissionId = '') {
         if (agreedInput) agreedInput.value = '';
         if (amountInput) amountInput.value = '';
         if (notesInput) notesInput.value = '';
-        if (optionSelect) optionSelect.value = 'fully_paid';
+        if (optionSelect) optionSelect.value = 'unpaid';
         if (statusSelect) statusSelect.value = 'Confirmed';
     }
 
@@ -3920,21 +3960,31 @@ function handleSavePayment(event) {
         const existing = list[matchIdx];
         finalAgreed = agreedPrice || existing.agreedPrice || (amount * 2);
 
-        if (paymentType === 'balance') {
+        if (amount <= 0 && (!existing.amount || Number(existing.amount) <= 0)) {
+            finalAmount = 0;
+            finalBal = finalAgreed;
+            finalPaymentType = 'unpaid';
+        } else if (paymentType === 'balance') {
             const prevAmount = Number(existing.amount) || 0;
             finalAmount = (amount >= finalAgreed && finalAgreed > 0) ? amount : (prevAmount + amount);
             if (finalAgreed > 0) finalAmount = Math.min(finalAgreed, finalAmount);
             finalBal = Math.max(0, finalAgreed - finalAmount);
-            finalPaymentType = finalBal === 0 ? 'fully_paid' : 'balance';
+            finalPaymentType = (finalBal === 0 && finalAmount > 0) ? 'fully_paid' : (finalAmount > 0 ? 'balance' : 'unpaid');
         } else if (paymentType === 'fully_paid') {
-            finalAmount = finalAgreed > 0 ? finalAgreed : Math.max(amount, (Number(existing.amount) || 0) + amount);
-            finalBal = 0;
-            finalPaymentType = 'fully_paid';
+            if (amount <= 0 && (!existing.amount || Number(existing.amount) <= 0)) {
+                finalAmount = 0;
+                finalBal = finalAgreed;
+                finalPaymentType = 'unpaid';
+            } else {
+                finalAmount = finalAgreed > 0 ? finalAgreed : Math.max(amount, (Number(existing.amount) || 0) + amount);
+                finalBal = 0;
+                finalPaymentType = 'fully_paid';
+            }
         } else {
             // downpayment or other
             finalAmount = amount;
             finalBal = Math.max(0, finalAgreed - finalAmount);
-            finalPaymentType = paymentType;
+            finalPaymentType = finalAmount <= 0 ? 'unpaid' : (finalBal === 0 ? 'fully_paid' : paymentType);
         }
 
         // Manage receipts on payment record
@@ -3968,11 +4018,17 @@ function handleSavePayment(event) {
             (!service || !p.service || p.service.trim().toLowerCase() === serviceLower)
         ));
 
-        showToast(`Payment entry for ${clientName} updated to ${finalPaymentType === 'fully_paid' ? 'Fully Paid' : 'Balance Paid'}!`);
+        showToast(`Payment entry for ${clientName} updated to ${finalPaymentType === 'fully_paid' ? 'Fully Paid' : (finalPaymentType === 'unpaid' ? 'Not Paid' : 'Balance Paid')}!`);
     } else {
         // Create new record
-        finalBal = Math.max(0, (agreedPrice || amount) - amount);
-        finalPaymentType = (paymentType === 'balance' && finalBal === 0) ? 'fully_paid' : paymentType;
+        if (amount <= 0) {
+            finalAmount = 0;
+            finalBal = finalAgreed;
+            finalPaymentType = 'unpaid';
+        } else {
+            finalBal = Math.max(0, (agreedPrice || amount) - amount);
+            finalPaymentType = (finalBal === 0 && finalAmount > 0) ? 'fully_paid' : paymentType;
+        }
         const newId = 'PAY-' + (1000 + list.length + 1);
         list.unshift({
             id: newId,

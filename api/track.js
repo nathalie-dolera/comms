@@ -40,7 +40,7 @@ module.exports = async (req, res) => {
         : (Number(submission.balance) || Math.max(0, resolvedAgreedPrice - resolvedAmountPaid));
       const resolvedPaymentType = matchedPay?.paymentType || submission.paymentType || '';
       const resolvedPayment = matchedPay?.mode || submission.payment || '';
-      const isFullyPaid = resolvedPaymentType === 'fully_paid' || (resolvedAmountPaid > 0 && resolvedAgreedPrice > 0 && resolvedAmountPaid >= resolvedAgreedPrice);
+      const isFullyPaid = resolvedAmountPaid > 0 && ((resolvedAgreedPrice > 0 && resolvedAmountPaid >= resolvedAgreedPrice) || resolvedPaymentType === 'fully_paid');
 
       return {
         id: submission.id,
