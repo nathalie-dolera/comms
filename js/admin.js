@@ -967,9 +967,7 @@ function renderCommissionViewTab(sub) {
                 ` : ''}
                 ${!isFullyPaid ? `
                     <button class="btn-action" style="background:#15803d; color:#fff; font-weight:700;" onclick="setCommissionPaymentStatus('${sub.id}', 'fully_paid')">✓ Mark as Fully Paid</button>
-                ` : `
-                    <button class="btn-action" style="background:#b45309; color:#fff; font-weight:700;" onclick="setCommissionPaymentStatus('${sub.id}', 'downpayment')">↺ Revert to 50% DP</button>
-                `}
+                ` : ''}
                 <button class="btn-action" style="background:#5a4a3a; color:#fff;" onclick="editSubmissionFromView('${sub.id}')">Edit Commission</button>
                 <button class="btn-action btn-secondary" onclick="recordPaymentFromCommission('${sub.id}')">+ Log Payment in Sheet</button>
                 <button class="btn-action btn-danger" onclick="deleteSubmission('${sub.id}'); switchBackToCommissionsList();">Delete</button>
@@ -1005,33 +1003,26 @@ function renderCommissionViewTab(sub) {
                 </div>
 
                 <div style="background: #faf4ee; padding: 12px 14px; border-radius: 6px; border: 1px solid #e2d2c2;">
-                    <span style="font-size: 11px; text-transform: uppercase; font-family:'Special Elite', monospace; color: var(--maroon); font-weight: bold; display: block; margin-bottom: 4px;">Payment Status</span>
+                    <span style="font-size: 11px; text-transform: uppercase; font-family:'Special Elite', monospace; color: var(--maroon); font-weight: bold; display: block; margin-bottom: 6px;">Payment Status</span>
                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-                        <div style="display: flex; align-items: center; gap: 6px;">
-                            <span class="payment-badge ${badgeClass}" style="font-size: 12px; padding: 4px 10px;">${paymentLabel}</span>
-                            <span style="font-size: 12px; font-weight: 600; color: #555;">via ${escapeHtml(sub.payment || 'GCash')}</span>
-                        </div>
-                        <select class="payment-badge ${badgeClass}" onchange="setCommissionPaymentStatus('${sub.id}', this.value)" style="cursor: pointer; font-size: 11.5px; padding: 3px 6px; outline: none;">
+                        <select class="payment-badge ${badgeClass}" onchange="setCommissionPaymentStatus('${sub.id}', this.value)" style="cursor: pointer; font-size: 12px; padding: 5px 12px; font-weight: bold; outline: none; border-radius: 12px;">
                             <option value="unpaid" ${!hasPayment ? 'selected' : ''}>Not Paid</option>
                             <option value="downpayment" ${hasPayment && !isFullyPaid ? 'selected' : ''}>50% DP</option>
                             <option value="fully_paid" ${isFullyPaid ? 'selected' : ''}>Fully Paid</option>
                         </select>
+                        <span style="font-size: 12px; font-weight: 600; color: #555;">via ${escapeHtml(sub.payment || 'GCash')}</span>
                     </div>
-                    <div style="margin-top: 8px;">
-                        ${!isFullyPaid ? `
+                    ${!isFullyPaid ? `
+                        <div style="margin-top: 8px;">
                             <button type="button" class="btn-action" style="background:#15803d; color:#fff; font-size: 11.5px; font-weight: 700; padding: 5px 12px; border-radius: 4px; cursor: pointer; width: 100%; border: none;" onclick="setCommissionPaymentStatus('${sub.id}', 'fully_paid')">
                                 ✓ Mark as Fully Paid
                             </button>
-                        ` : `
-                            <button type="button" class="btn-action" style="background:#b45309; color:#fff; font-size: 11.5px; font-weight: 700; padding: 5px 12px; border-radius: 4px; cursor: pointer; width: 100%; border: none;" onclick="setCommissionPaymentStatus('${sub.id}', 'downpayment')">
-                                ↺ Set to 50% DP
-                            </button>
-                        `}
-                    </div>
-                    ${agreedAmt > 0 ? `
-                        <div style="font-size: 11.5px; color: #555; margin-top: 6px;">
-                            ₱${paidAmt.toLocaleString()} paid of ₱${agreedAmt.toLocaleString()} ${balAmt > 0 ? `(₱${balAmt.toLocaleString()} due)` : ''}
                         </div>
+                        ${(agreedAmt > 0 && balAmt > 0) ? `
+                            <div style="font-size: 11.5px; color: #555; margin-top: 6px;">
+                                ₱${paidAmt.toLocaleString()} paid of ₱${agreedAmt.toLocaleString()} (₱${balAmt.toLocaleString()} due)
+                            </div>
+                        ` : ''}
                     ` : ''}
                 </div>
 
@@ -1109,50 +1100,6 @@ function renderCommissionViewTab(sub) {
                             </div>
                             `;
                         }).join('')}
-                    </div>
-                `}
-            </div>
-
-            <!-- PAYMENT PROOF SCREENSHOTS -->
-            <div style="margin-bottom: 22px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
-                    <label style="color: var(--maroon); font-weight: bold; font-family:'Special Elite', monospace; text-transform: uppercase; font-size: 12px; margin: 0;">
-                        Payment Proof Receipts &amp; Screenshots (${commissionReceipts.length})
-                    </label>
-                    ${commissionReceipts.length > 1 ? `
-                        <span style="font-size: 11px; color: #15803d; font-weight: 700; font-family:'Special Elite', monospace; background: #eafaf1; padding: 2px 8px; border-radius: 4px; border: 1px solid #a9dfbf;">
-                            ✓ 2 Receipts (DP + Balance)
-                        </span>
-                    ` : ''}
-                </div>
-
-                ${commissionReceipts.length === 0 ? `
-                    <div style="background: #faf4ee; border: 1px dashed #dcd0c2; border-radius: 6px; padding: 14px; text-align: center; color: #886560; font-style: italic; font-size: 13px; font-family:'Special Elite', monospace;">
-                        No payment receipt screenshot uploaded for this commission.
-                    </div>
-                ` : `
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px;">
-                        ${commissionReceipts.map((rcItem, rcIdx) => `
-                            <div style="background: #ffffff; border: 1px solid #dcd0c2; border-radius: 6px; padding: 10px 12px; display: flex; align-items: center; gap: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);">
-                                <div style="cursor: pointer; flex-shrink: 0;" onclick="previewReferenceImage('${rcItem.receipt}', '${escapeHtml(rcItem.label)} - ${escapeHtml(sub.name)}')">
-                                    <img src="${rcItem.receipt}" alt="${escapeHtml(rcItem.label)}" style="height: 72px; width: auto; max-width: 80px; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.12); border: 1px solid #dcd0c2; object-fit: contain; background: #faf4ee;">
-                                </div>
-                                <div style="flex: 1; min-width: 0;">
-                                    <div style="font-size: 12px; font-weight: 700; color: var(--maroon-dark); font-family:'Special Elite', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(rcItem.label)}">
-                                        ${escapeHtml(rcItem.label)}
-                                    </div>
-                                    <div style="font-size: 11px; color: #7a4e4e; margin-top: 2px;">
-                                        ${rcItem.mode ? escapeHtml(rcItem.mode) : 'GCash'} ${rcItem.amount > 0 ? `• ${formatPHP(rcItem.amount)}` : ''}
-                                    </div>
-                                    <div style="font-size: 10.5px; color: #888; margin-top: 1px;">Click thumbnail to view full size</div>
-                                    <div style="margin-top: 6px;">
-                                        <a href="${rcItem.receipt}" download="${rcIdx === 0 ? 'dp-receipt' : 'balance-receipt'}-${escapeHtml(sub.name)}.jpg" class="btn-action btn-primary" style="display: inline-block; padding: 3px 8px; font-size: 10.5px; text-decoration: none; border-radius: 4px; font-family:'Special Elite', monospace; white-space: nowrap;">
-                                            Download
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        `).join('')}
                     </div>
                 `}
             </div>
