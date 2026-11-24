@@ -331,9 +331,6 @@
                             </h2>
                             <span style="font-size:11px; color:var(--rose-light); font-family:'Special Elite', monospace; font-weight:600;">Shown to accepted clients only</span>
                         </div>
-                        <p style="font-size:12px; color:#7a5048; margin:0 0 14px; line-height: 1.4;">
-                            Upload QR codes for as many payment modes as you want. When an accepted client selects their mode of payment in the client submission form, the exact matching QR code will automatically appear!
-                        </p>
 
                         <!-- Single QR Slider Container (Slide with < > arrows) -->
                         <div id="payment-qrs-list" style="margin-bottom: 14px;">
@@ -486,7 +483,6 @@
                         <h2 style="font-family:'Special Elite', monospace; font-size: 22px; color: var(--paper-cream); margin: 0;">Clients Feedback</h2>
                     </div>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button class="btn-action btn-secondary" onclick="openDefaultProofModal()">Default Feedback Photo</button>
                         <button class="btn-action btn-primary" onclick="openAddFeedbackModal()">+ Upload Feedback</button>
                     </div>
                 </div>
@@ -681,6 +677,11 @@
             <section class="tab-content" id="tab-terms">
                 <div style="max-width: 1080px; margin: 0 auto;">
 
+                    <!-- Top Action Button (Save Changes on top of page main title) -->
+                    <div style="display: flex; justify-content: flex-end; margin-bottom: 16px;">
+                        <button type="button" class="btn-action btn-primary" onclick="saveTermsContent(true)">Save Changes</button>
+                    </div>
+
                     <!-- Header Settings: Title & Subtitle (Centered) -->
                     <div class="admin-card" style="text-align: center; margin-bottom: 22px; padding: 22px 28px;">
                         <div class="admin-form-group" style="margin-bottom: 14px;">
@@ -691,11 +692,6 @@
                             <label style="font-family:'Special Elite', monospace; font-size: 12px; text-transform: uppercase; color: #7a5048; letter-spacing: 1px; text-align: center; display: block;">Page Subtitle</label>
                             <input type="text" id="terms-page-subtitle" value="Please read carefully before requesting a commission" placeholder="e.g. Please read carefully before requesting a commission" oninput="autoSaveTerms()" style="text-align: center; font-style: italic; font-size: 14px; color: #5a2e2e; max-width: 620px; margin: 0 auto; display: block;">
                         </div>
-                    </div>
-
-                    <!-- Top Action Button (Only Save Changes) -->
-                    <div style="display: flex; justify-content: flex-end; margin-bottom: 22px;">
-                        <button type="button" class="btn-action btn-primary" onclick="saveTermsContent(true)">Save Changes</button>
                     </div>
 
                     <!-- 2-Column Grid (Cards + Dotted Guideline Add Slot at the end) -->
@@ -854,7 +850,7 @@
     <div class="modal-overlay" id="modal-add-feedback">
         <div class="modal-box">
             <div class="modal-header">
-                <h3>Upload Feedback Image</h3>
+                <h3>Upload Feedback</h3>
                 <button class="modal-close" onclick="closeModal('modal-add-feedback')">&times;</button>
             </div>
             <form onsubmit="handleSaveFeedback(event)">
@@ -867,18 +863,8 @@
                     <input type="text" id="fb-project" required placeholder="e.g. Infographics, Website, Reviewer">
                 </div>
                 <div class="admin-form-group">
-                    <label>Feedback Screenshot / Image (Optional)</label>
-                    <input type="file" id="fb-image-file" accept="image/*" style="display:none;" onchange="previewImageFile(event, 'fb-preview-box')">
-                    <div class="image-upload-preview" id="fb-preview-box"
-                        onclick="document.getElementById('fb-image-file').click()"
-                        ondragover="adminDragOver(event, this)" ondragleave="adminDragLeave(this)"
-                        ondrop="adminDrop(event, this, 'fb-preview-box')">
-                        <span class="upload-text">Click, drag & drop, or paste a screenshot</span>
-                    </div>
-                </div>
-                <div class="admin-form-group">
                     <label>Client Feedback</label>
-                    <textarea id="fb-notes" rows="3" placeholder="Enter the client's feedback message here..."></textarea>
+                    <textarea id="fb-notes" rows="4" placeholder="Enter the client's feedback message here..."></textarea>
                 </div>
                 <button type="submit" class="btn-action btn-primary" style="width: 100%; padding: 12px; font-size: 14px;">Upload Feedback</button>
             </form>
@@ -950,7 +936,7 @@
                 <div class="admin-form-group">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                         <label style="margin-bottom: 0;">Category</label>
-                        <button type="button" class="btn-action btn-secondary" onclick="promptAddNewCategory()" style="padding: 2px 10px; font-size: 11px;">+ New Category</button>
+                        <button type="button" class="btn-action btn-secondary" onclick="openAddServiceModal()" style="padding: 2px 10px; font-size: 11px;">+ Add Service</button>
                     </div>
                     <select id="out-category" required style="width: 100%;">
                         <!-- Populated dynamically via JS -->
@@ -987,7 +973,7 @@
                 <div class="admin-form-group">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                         <label style="margin-bottom: 0;">Category</label>
-                        <button type="button" class="btn-action btn-secondary" onclick="promptAddNewCategory()" style="padding: 2px 10px; font-size: 11px;">+ New Category</button>
+                        <button type="button" class="btn-action btn-secondary" onclick="openAddServiceModal()" style="padding: 2px 10px; font-size: 11px;">+ Add Service</button>
                     </div>
                     <select id="edit-out-category" required style="width: 100%;">
                         <!-- Populated dynamically via JS -->

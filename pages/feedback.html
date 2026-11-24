@@ -304,17 +304,9 @@
                     <input type="text" id="c-fb-project" required placeholder="e.g. Infographics, Website, Reviewer">
                 </div>
                 <div class="form-group">
-                    <label>Screenshot / Proof Photo (Optional)</label>
-                    <input type="file" id="c-fb-file" accept="image/*" onchange="handlePreviewClientFile(event)">
-                    <div id="c-fb-preview"
-                        style="margin-top: 8px; max-height: 140px; overflow:hidden; border-radius:4px; display:none;">
-                        <img id="c-fb-img-tag" src="" style="width:100%; object-fit:contain;">
-                    </div>
-                </div>
-                <div class="form-group">
                     <label>Client Feedback</label>
-                    <textarea id="c-fb-notes" placeholder="Enter your feedback here..."
-                        style="min-height: 70px;"></textarea>
+                    <textarea id="c-fb-notes" required placeholder="Enter your feedback here..."
+                        style="min-height: 85px;"></textarea>
                 </div>
 
                 <button type="submit" class="submit-btn">Post Feedback</button>
@@ -359,28 +351,21 @@
             if (!container) return;
 
             if (list.length === 0) {
-                container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--paper-cream); padding: 50px;">No feedback images available yet.</div>';
+                container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--paper-cream); padding: 50px;">No client feedback submitted yet.</div>';
                 return;
             }
 
-            const defaultImg = Storage.getDefaultFeedbackImage();
-
             container.innerHTML = list.map(item => {
-                const proofImg = item.imageUrl || defaultImg;
-                const resolvedSrc = Storage.resolveAssetPath(proofImg);
                 return `
-                <div class="review-card" onclick="openFeedbackById('${escapeHtml(item.id)}')">
+                <div class="review-card" style="cursor: default;">
                     <div class="review-pin"></div>
-                    <div class="review-img-box">
-                        <img src="${escapeHtml(resolvedSrc)}" alt="Review by ${escapeHtml(formatGCashName(item.clientName))}">
-                    </div>
-                    <div class="review-content">
+                    <div class="review-content" style="padding-top: 6px;">
+                        <div class="review-stars">★★★★★</div>
                         <div class="review-client">${escapeHtml(formatGCashName(item.clientName))}</div>
                         <div class="review-project">${escapeHtml(item.project || 'Commission')}</div>
                         ${item.notes ? `
-                            <div style="margin-top: 8px; background: #fdf8f4; border: 1px solid #ebdccf; border-radius: 6px; padding: 7px 10px; font-size: 12px; color: #2a0e0e; line-height: 1.4;">
-                                <span style="font-size: 9.5px; font-family:'Special Elite', monospace; color: var(--maroon); text-transform: uppercase; display: block; margin-bottom: 2px;">Client Feedback:</span>
-                                ${escapeHtml(item.notes)}
+                            <div style="margin-top: 10px; background: #fdf8f4; border: 1px dashed #ebdccf; border-radius: 6px; padding: 10px 12px; font-size: 13px; color: #2a0e0e; line-height: 1.5; font-style: italic;">
+                                "${escapeHtml(item.notes)}"
                             </div>
                         ` : ''}
                     </div>
@@ -438,14 +423,14 @@
                 clientName: document.getElementById('c-fb-name').value,
                 project: document.getElementById('c-fb-project').value,
                 notes: document.getElementById('c-fb-notes').value,
-                imageUrl: clientBase64Img
+                imageUrl: ''
             };
             try {
                 await Storage.submitFeedback(newReview);
                 await Storage.refresh();
                 closeClientUploadModal();
                 renderFeedbacks();
-                alert('Thank you for submitting your feedback screenshot!');
+                alert('Thank you for submitting your feedback!');
             } catch (error) { alert(error.message || 'Could not submit feedback.'); }
         }
     </script>

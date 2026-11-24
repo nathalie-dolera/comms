@@ -742,6 +742,28 @@ function saveViewTabAdminNote(id) {
     }
 }
 
+function toggleEditProjectDescription(id) {
+    const displayEl = document.getElementById('view-tab-project-desc-display');
+    const editWrap = document.getElementById('view-tab-project-desc-edit-wrap');
+    const editBtn = document.getElementById('btn-edit-project-desc');
+    if (displayEl && editWrap) {
+        displayEl.style.display = 'none';
+        editWrap.style.display = 'flex';
+        if (editBtn) editBtn.style.display = 'none';
+    }
+}
+
+function cancelEditProjectDescription(id) {
+    const displayEl = document.getElementById('view-tab-project-desc-display');
+    const editWrap = document.getElementById('view-tab-project-desc-edit-wrap');
+    const editBtn = document.getElementById('btn-edit-project-desc');
+    if (displayEl && editWrap) {
+        displayEl.style.display = 'block';
+        editWrap.style.display = 'none';
+        if (editBtn) editBtn.style.display = 'inline-block';
+    }
+}
+
 function saveViewTabProjectDescription(id) {
     const desc = document.getElementById('view-tab-project-desc')?.value.trim() || '';
     const list = Storage.get(Storage.KEYS.SUBMISSIONS, []);
@@ -1057,15 +1079,30 @@ function renderCommissionViewTab(sub) {
                 </div>
             </div>
 
-            <!-- PROJECT DESCRIPTION (Editable) -->
+            <!-- PROJECT DESCRIPTION (View by default, click edit to modify) -->
             <div style="margin-bottom: 22px;">
-                <label style="color: var(--maroon); font-weight: bold; font-family:'Special Elite', monospace; text-transform: uppercase; font-size: 12px; display: block; margin-bottom: 6px;">
-                    Project Description
-                </label>
-                <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <label style="color: var(--maroon); font-weight: bold; font-family:'Special Elite', monospace; text-transform: uppercase; font-size: 12px; margin: 0;">
+                        Project Description
+                    </label>
+                    <button type="button" id="btn-edit-project-desc" class="btn-action btn-secondary" onclick="toggleEditProjectDescription('${sub.id}')" style="padding: 3px 10px; font-size: 11px;">
+                        ✏️ Edit Description
+                    </button>
+                </div>
+                
+                <!-- Display View (Default) -->
+                <div id="view-tab-project-desc-display" class="modal-detail-box" style="white-space: pre-wrap; line-height: 1.6; font-size: 13px; color: #2a1010; min-height: 48px; background: #faf4ee; border: 1px solid #e2d2c2; border-radius: 6px; padding: 12px 14px;">
+                    ${sub.description ? escapeHtml(sub.description) : '<span style="color:#a88880; font-style:italic;">No description provided.</span>'}
+                </div>
+
+                <!-- Edit Form (Hidden by default to avoid mistakes) -->
+                <div id="view-tab-project-desc-edit-wrap" style="display: none; flex-direction: column; gap: 8px;">
                     <textarea id="view-tab-project-desc" rows="4" style="width: 100%; box-sizing: border-box; padding: 12px 14px; border: 1px solid #d4c4b0; border-radius: 6px; font-size: 13px; line-height: 1.6; color: #2a1010; font-family: inherit; background: #fff; resize: vertical;" placeholder="Enter project description...">${escapeHtml(sub.description || '')}</textarea>
-                    <div style="display: flex; justify-content: flex-end;">
-                        <button type="button" class="btn-action btn-primary" onclick="saveViewTabProjectDescription('${sub.id}')" style="padding: 6px 16px; font-size: 12px;">
+                    <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                        <button type="button" class="btn-action btn-secondary" onclick="cancelEditProjectDescription('${sub.id}')" style="padding: 5px 12px; font-size: 11.5px;">
+                            Cancel
+                        </button>
+                        <button type="button" class="btn-action btn-primary" onclick="saveViewTabProjectDescription('${sub.id}')" style="padding: 5px 14px; font-size: 11.5px;">
                             Save Description
                         </button>
                     </div>
@@ -1650,30 +1687,28 @@ function renderFeedbacks() {
     if (!container) return;
 
     if (list.length === 0) {
-        container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #a88880; padding: 30px;">No feedback images uploaded yet.</div>`;
+        container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #a88880; padding: 30px;">No feedbacks added yet.</div>`;
         return;
     }
 
-    const defaultImg = Storage.getDefaultFeedbackImage();
-
     container.innerHTML = list.map(item => {
-        const proofImg = Storage.resolveAssetPath(item.imageUrl || defaultImg);
         return `
-        <div class="admin-item-card">
-            <div class="img-thumb">
-                <img src="${proofImg}" alt="Feedback Proof" style="width: 100%; height: 100%; object-fit: cover;">
-            </div>
-            <div class="admin-item-body">
-                <h4 style="font-family:'Special Elite', monospace; font-size: 15px; color: var(--maroon-dark);" title="Client: ${item.clientName}">${formatGCashName(item.clientName)}</h4>
-                <p style="font-size: 12px; color: #5a2e2e; margin-top: 2px;"><strong>Project:</strong> ${item.project || 'General Service'}</p>
-                ${item.notes ? `
-                    <div style="margin-top: 8px; background: #fdf8f4; border: 1px solid #ebdccf; border-radius: 6px; padding: 8px 10px; font-size: 12.5px; color: #2a0e0e; line-height: 1.4;">
-                        <span style="font-size: 10px; font-family:'Special Elite', monospace; color: var(--maroon); text-transform: uppercase; display: block; margin-bottom: 2px;">Client Feedback:</span>
-                        ${item.notes}
+        <div class="admin-item-card" style="padding: 16px;">
+            <div class="admin-item-body" style="padding: 0;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+                    <div>
+                        <h4 style="font-family:'Special Elite', monospace; font-size: 15px; color: var(--maroon-dark); margin: 0;" title="Client: ${escapeHtml(item.clientName)}">${escapeHtml(formatGCashName(item.clientName))}</h4>
+                        <span style="font-size: 11.5px; color: #886560; font-family:'Special Elite', monospace;">${escapeHtml(item.project || 'General Service')}</span>
                     </div>
-                ` : ''}
-                <div class="admin-item-actions">
-                    <button class="btn-action btn-danger" onclick="deleteFeedback('${item.id}')">Delete</button>
+                    <span style="font-size: 11px; color: #a88880;">${escapeHtml(item.date || '')}</span>
+                </div>
+                ${item.notes ? `
+                    <div style="margin-top: 10px; background: #fdf8f4; border: 1px dashed #ebdccf; border-radius: 6px; padding: 10px 12px; font-size: 13px; color: #2a0e0e; line-height: 1.5; font-style: italic;">
+                        "${escapeHtml(item.notes)}"
+                    </div>
+                ` : '<div style="margin-top: 6px; font-size: 12px; color: #a88880; font-style: italic;">No comment provided.</div>'}
+                <div class="admin-item-actions" style="margin-top: 12px; display: flex; justify-content: flex-end;">
+                    <button class="btn-action btn-danger" onclick="deleteFeedback('${item.id}')" style="padding: 4px 12px; font-size: 11px;">Delete</button>
                 </div>
             </div>
         </div>
@@ -1684,13 +1719,16 @@ function renderFeedbacks() {
 
 function openAddFeedbackModal() {
     tempFeedbackImage = '';
-    document.getElementById('fb-client').value = '';
-    document.getElementById('fb-project').value = '';
-    document.getElementById('fb-notes').value = '';
-    document.getElementById('fb-image-file').value = '';
+    if (document.getElementById('fb-client')) document.getElementById('fb-client').value = '';
+    if (document.getElementById('fb-project')) document.getElementById('fb-project').value = '';
+    if (document.getElementById('fb-notes')) document.getElementById('fb-notes').value = '';
+    const fileEl = document.getElementById('fb-image-file');
+    if (fileEl) fileEl.value = '';
     const box = document.getElementById('fb-preview-box');
-    box.style.backgroundImage = 'none';
-    box.innerHTML = '<span class="upload-text">Click to choose image or drag &amp; drop screenshot here</span>';
+    if (box) {
+        box.style.backgroundImage = 'none';
+        box.innerHTML = '';
+    }
     openModal('modal-add-feedback');
 }
 
@@ -1704,16 +1742,13 @@ function handleSaveFeedback(event) {
         project: document.getElementById('fb-project').value.trim(),
         notes: document.getElementById('fb-notes').value.trim(),
         date: new Date().toISOString().split('T')[0],
-        imageUrl: tempFeedbackImage
+        imageUrl: ''
     };
 
     list.unshift(newFb);
     Storage.set(Storage.KEYS.FEEDBACKS, list);
-    if (tempFeedbackImage) {
-        Storage.set(Storage.KEYS.DEFAULT_FEEDBACK_IMAGE, tempFeedbackImage);
-    }
     closeModal('modal-add-feedback');
-    showToast('Feedback image uploaded!');
+    showToast('Feedback added successfully!');
     renderFeedbacks();
 }
 
@@ -1735,6 +1770,15 @@ let adminCurrentOutputFilter = 'all';
 function getOutputCategories() {
     let cats = Storage.get(Storage.KEYS.OUTPUT_CATEGORIES, []);
     if (!Array.isArray(cats)) cats = [];
+    const services = Storage.get(Storage.KEYS.SERVICES, []);
+    if (Array.isArray(services)) {
+        services.forEach(s => {
+            const name = typeof s === 'string' ? s.trim() : (s.name || s.title || '').trim();
+            if (name && !cats.some(c => c.toLowerCase() === name.toLowerCase())) {
+                cats.push(name);
+            }
+        });
+    }
     return cats;
 }
 
@@ -3139,6 +3183,9 @@ function handleSaveService(event) {
     closeModal('modal-service');
     renderServicesList();
     populateAdminPaymentServices();
+    populateCategorySelect();
+    populateEditOutputCategorySelect();
+    renderAdminOutputFilterBar();
 }
 
 function deleteService(index) {
@@ -4469,17 +4516,6 @@ function renderQrListHtml(container, list) {
                     </button>
                 ` : `<div style="width: 32px;"></div>`}
             </div>
-
-            <!-- Method Selector Pills if more than 1 QR -->
-            ${total > 1 ? `
-                <div style="display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; justify-content: center;">
-                    ${list.map((q, qIdx) => `
-                        <button type="button" onclick="setPaymentQrIndex(${qIdx})" style="padding: 2px 8px; border-radius: 12px; font-size: 10.5px; font-family:'Special Elite', monospace; border: 1px solid ${qIdx === currentQrIndex ? 'var(--maroon)' : '#dcd0c2'}; background: ${qIdx === currentQrIndex ? 'var(--maroon)' : '#fdfaf6'}; color: ${qIdx === currentQrIndex ? '#fff' : '#6b4b45'}; cursor: pointer; transition: all 0.15s;">
-                            ${escapeHtml(q.method)}
-                        </button>
-                    `).join('')}
-                </div>
-            ` : ''}
 
             <!-- Action buttons: Replace & Delete -->
             <div style="display: flex; gap: 8px; width: 100%; max-width: 220px;">
