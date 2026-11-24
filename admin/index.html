@@ -312,69 +312,81 @@
                     </div>
                 </div>
 
-                <!-- Admin Multi-Payment QR Code Settings -->
-                <div class="admin-card" style="margin: 20px 0; border: 2px solid var(--rose);">
-                    <div class="admin-card-header" style="border-bottom: 1px dashed var(--rose); padding-bottom: 10px; margin-bottom: 12px;">
-                        <h2 style="font-family:'Special Elite', monospace; font-size:18px; color:var(--maroon-dark); margin:0;">
-                            Payment QR Codes (GCash, Maya, Bank Transfer, etc.)
-                        </h2>
-                        <span style="font-size:11px; color:var(--rose-light); font-family:'Special Elite', monospace; font-weight:600;">Shown to accepted clients only</span>
-                    </div>
-                    <p style="font-size:12.5px; color:#7a5048; margin:0 0 16px;">
-                        Upload QR codes for as many payment modes as you want (GCash, Maya, Bank Transfer, Maribank, etc.). When an accepted client selects their mode of payment in the client submission form, the exact matching QR code will automatically appear!
-                    </p>
-
-                    <!-- Active QR Cards Grid -->
-                    <div id="payment-qrs-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; margin-bottom: 20px;">
-                        <!-- Injected via JS -->
-                    </div>
-
-                    <!-- Add New QR Form -->
-                    <div style="background: #faf4ee; border: 1px dashed var(--rose); border-radius: 6px; padding: 16px;">
-                        <h4 style="font-family:'Special Elite', monospace; font-size: 13.5px; color: var(--maroon); margin: 0 0 12px 0;">+ Add New Payment QR Code</h4>
-                        <div style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
-                            <div style="flex: 1; min-width: 150px;">
-                                <label style="font-size: 11.5px; font-weight: 600; color: #5a2e2e; display: block; margin-bottom: 4px;">Payment Method</label>
-                                <select id="new-qr-method" onchange="toggleCustomQrMethod(this.value)" style="width: 100%; padding: 8px 10px; border: 1px solid #cbb8a8; border-radius: 4px; font-size: 13px;">
-                                    <option value="GCash">GCash</option>
-                                    <option value="Maya">Maya</option>
-                                    <option value="Maribank">Maribank</option>
-                                    <option value="PayPal">PayPal</option>
-                                    <option value="Bank Transfer">Bank Transfer</option>
-                                    <option value="Other">Other / Custom</option>
-                                </select>
-                                <input type="text" id="new-qr-custom-method" placeholder="Custom method name" style="display: none; width: 100%; margin-top: 6px; padding: 7px 10px; border: 1px solid #cbb8a8; border-radius: 4px; font-size: 13px; box-sizing: border-box;">
-                            </div>
-                            <div style="flex: 1; min-width: 180px;">
-                                <label style="font-size: 11.5px; font-weight: 600; color: #5a2e2e; display: block; margin-bottom: 4px;">QR Code Image</label>
-                                <div id="qr-upload-dropzone" style="border: 2px dashed #cbb8a8; border-radius: 4px; background: #faf6f2; padding: 10px; text-align: center; cursor: pointer; font-size: 12px; color: var(--maroon); font-family: 'Special Elite', monospace; transition: border-color 0.2s, background 0.2s;"
-                                onclick="document.getElementById('new-qr-file-input').click()"
-                                ondragover="adminDragOver(event, this)" ondragleave="adminDragLeave(this)"
-                                ondrop="adminDrop(event, this, 'new-qr')">
-                                Click, drag & drop, or paste QR image
-                            </div>
-                            <input type="file" id="new-qr-file-input" accept="image/*" style="display:none;">
-                            </div>
-                            <div>
-                                <button type="button" class="btn-action btn-primary" onclick="handleSaveMultiPaymentQr()" style="padding: 9px 18px; font-size: 13px;">
-                                    Upload &amp; Save QR
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                <!-- Toggle Minimize/Maximize Button for Top Section -->
+                <div style="display: flex; justify-content: flex-end; margin: 16px 0 10px;">
+                    <button type="button" id="btn-toggle-payment-top" class="btn-action btn-secondary" onclick="togglePaymentTopSection()" style="padding: 5px 14px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;">
+                        <span id="payment-top-toggle-icon">▲</span>
+                        <span id="payment-top-toggle-text">Minimize Top Section</span>
+                    </button>
                 </div>
 
-                <!-- Client Submitted Payment Screenshots (Proof Review & Received / Not Received Toggle) -->
-                <div class="admin-card" style="margin: 20px 0; border: 2px solid var(--rose);">
-                    <div class="admin-card-header">
-                        <div>
-                            <h2 style="font-family:'Special Elite', monospace; font-size:18px; color:var(--maroon-dark); margin:0;">
-                                Submitted Payment Screenshots &amp; Receipts
+                <!-- Side-by-Side: Payment QR Codes & Submitted Payment Proofs -->
+                <div id="payment-top-panels-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px; margin-bottom: 24px; align-items: stretch;">
+
+                    <!-- LEFT PANEL: Payment QR Codes -->
+                    <div class="admin-card" style="margin: 0; border: 2px solid var(--rose); display: flex; flex-direction: column;">
+                        <div class="admin-card-header" style="border-bottom: 1px dashed var(--rose); padding-bottom: 10px; margin-bottom: 10px;">
+                            <h2 style="font-family:'Special Elite', monospace; font-size:17px; color:var(--maroon-dark); margin:0;">
+                                Payment QR Codes
                             </h2>
-                            <p style="font-size:12px;color:#7a5048;margin:4px 0 0;">Review client payment proofs. Toggle between "Received" and "Not Received", or log directly to the sheet.</p>
+                            <span style="font-size:11px; color:var(--rose-light); font-family:'Special Elite', monospace; font-weight:600;">Shown to accepted clients only</span>
+                        </div>
+                        <p style="font-size:12px; color:#7a5048; margin:0 0 14px; line-height: 1.4;">
+                            Upload QR codes for as many payment modes as you want. When an accepted client selects their mode of payment in the client submission form, the exact matching QR code will automatically appear!
+                        </p>
+
+                        <!-- Single QR Slider Container (Slide with < > arrows) -->
+                        <div id="payment-qrs-list" style="margin-bottom: 14px;">
+                            <!-- Rendered via JS carousel -->
+                        </div>
+
+                        <!-- Add New QR Form -->
+                        <div style="background: #faf4ee; border: 1px dashed var(--rose); border-radius: 6px; padding: 12px; margin-top: auto;">
+                            <h4 style="font-family:'Special Elite', monospace; font-size: 12.5px; color: var(--maroon); margin: 0 0 8px 0;">+ Add New Payment QR Code</h4>
+                            <div style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap;">
+                                <div style="flex: 1; min-width: 120px;">
+                                    <label style="font-size: 11px; font-weight: 600; color: #5a2e2e; display: block; margin-bottom: 3px;">Method</label>
+                                    <select id="new-qr-method" onchange="toggleCustomQrMethod(this.value)" style="width: 100%; padding: 6px 8px; border: 1px solid #cbb8a8; border-radius: 4px; font-size: 12px;">
+                                        <option value="GCash">GCash</option>
+                                        <option value="Maya">Maya</option>
+                                        <option value="Maribank">Maribank</option>
+                                        <option value="PayPal">PayPal</option>
+                                        <option value="Bank Transfer">Bank Transfer</option>
+                                        <option value="Other">Other / Custom</option>
+                                    </select>
+                                    <input type="text" id="new-qr-custom-method" placeholder="Custom method name" style="display: none; width: 100%; margin-top: 5px; padding: 5px 8px; border: 1px solid #cbb8a8; border-radius: 4px; font-size: 12px; box-sizing: border-box;">
+                                </div>
+                                <div style="flex: 1; min-width: 130px;">
+                                    <label style="font-size: 11px; font-weight: 600; color: #5a2e2e; display: block; margin-bottom: 3px;">QR Image</label>
+                                    <div id="qr-upload-dropzone" style="border: 2px dashed #cbb8a8; border-radius: 4px; background: #faf6f2; padding: 6px 8px; text-align: center; cursor: pointer; font-size: 11px; color: var(--maroon); font-family: 'Special Elite', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+                                        onclick="document.getElementById('new-qr-file-input').click()"
+                                        ondragover="adminDragOver(event, this)" ondragleave="adminDragLeave(this)"
+                                        ondrop="adminDrop(event, this, 'new-qr')">
+                                        Click / drop QR
+                                    </div>
+                                    <input type="file" id="new-qr-file-input" accept="image/*" style="display:none;">
+                                </div>
+                                <div>
+                                    <button type="button" class="btn-action btn-primary" onclick="handleSaveMultiPaymentQr()" style="padding: 7px 12px; font-size: 12px;">
+                                        Save QR
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div id="pending-payment-proofs"></div>
+
+                    <!-- RIGHT PANEL: Submitted Payment Screenshots & Receipts -->
+                    <div class="admin-card" style="margin: 0; border: 2px solid var(--rose); display: flex; flex-direction: column;">
+                        <div class="admin-card-header" style="border-bottom: 1px dashed var(--rose); padding-bottom: 10px; margin-bottom: 10px;">
+                            <div>
+                                <h2 style="font-family:'Special Elite', monospace; font-size:17px; color:var(--maroon-dark); margin:0;">
+                                    Submitted Payment Screenshots &amp; Receipts
+                                </h2>
+                                <p style="font-size:12px; color:#7a5048; margin:4px 0 0;">Review client payment proofs. Toggle between "Received" and "Not Received", or log directly to the sheet.</p>
+                            </div>
+                        </div>
+                        <div id="pending-payment-proofs" style="max-height: 480px; overflow-y: auto; padding-right: 4px;"></div>
+                    </div>
                 </div>
 
                 <!-- Charts Row: Monthly Bar Graph + Service Pie Chart -->

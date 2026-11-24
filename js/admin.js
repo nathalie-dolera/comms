@@ -3363,6 +3363,7 @@ function consolidateDuplicatePayments() {
 }
 
 function renderPaymentsTracker() {
+    initPaymentTopSectionToggle();
     consolidateDuplicatePayments();
     const payments = Storage.get(Storage.KEYS.PAYMENTS, []);
     renderPaymentStats(payments);
@@ -4418,40 +4419,131 @@ function toggleCustomQrMethod(val) {
 }
 
 let adminCachedQrs = null;
+let currentQrIndex = 0;
+
+function togglePaymentTopSection() {
+    const container = document.getElementById('payment-top-panels-container');
+    const icon = document.getElementById('payment-top-toggle-icon');
+    const text = document.getElementById('payment-top-toggle-text');
+    if (!container) return;
+
+    const isHidden = container.style.display === 'none';
+    if (isHidden) {
+        container.style.display = 'grid';
+        if (icon) icon.textContent = '▲';
+        if (text) text.textContent = 'Minimize Top Section';
+        Storage.set('thalie_payment_top_minimized', false);
+    } else {
+        container.style.display = 'none';
+        if (icon) icon.textContent = '▼';
+        if (text) text.textContent = 'Maximize Top Section (QR & Proofs)';
+        Storage.set('thalie_payment_top_minimized', true);
+    }
+}
+
+function initPaymentTopSectionToggle() {
+    const isMinimized = Storage.get('thalie_payment_top_minimized', false);
+    const container = document.getElementById('payment-top-panels-container');
+    const icon = document.getElementById('payment-top-toggle-icon');
+    const text = document.getElementById('payment-top-toggle-text');
+    if (isMinimized && container) {
+        container.style.display = 'none';
+        if (icon) icon.textContent = '▼';
+        if (text) text.textContent = 'Maximize Top Section (QR & Proofs)';
+    }
+}
+
+function slidePaymentQr(direction) {
+    const list = adminCachedQrs || getPaymentQrsList();
+    if (!list || list.length <= 1) return;
+    currentQrIndex = (currentQrIndex + direction + list.length) % list.length;
+    const container = document.getElementById('payment-qrs-list');
+    renderQrListHtml(container, list);
+}
+
+function setPaymentQrIndex(idx) {
+    const list = adminCachedQrs || getPaymentQrsList();
+    if (!list || idx < 0 || idx >= list.length) return;
+    currentQrIndex = idx;
+    const container = document.getElementById('payment-qrs-list');
+    renderQrListHtml(container, list);
+}
 
 function renderQrListHtml(container, list) {
     if (!container) return;
     if (!list || list.length === 0) {
         container.innerHTML = `
-            <div style="grid-column: 1 / -1; padding: 24px; text-align: center; color: #8c5b52; background: #fff; border: 1px dashed var(--rose); border-radius: 6px; font-family:'Special Elite', monospace; font-size: 13px;">
-                No payment QR codes added yet. Add QR codes below for GCash, Maya, Bank Transfer, etc.!
+            <div style="padding: 24px 16px; text-align: center; color: #8c5b52; background: #faf4ee; border: 1px dashed var(--rose); border-radius: 6px; font-family:'Special Elite', monospace; font-size: 12.5px;">
+                No payment QR codes added yet.<br>Add QR codes below for GCash, Maya, Bank Transfer, etc.!
             </div>
         `;
         return;
     }
 
-    container.innerHTML = list.map((item, idx) => {
-        const safeMethod = escapeHtml(item.method);
-        const hasImg = !!item.image;
-        return `
+    if (currentQrIndex >= list.length) {
+        currentQrIndex = Math.max(0, list.length - 1);
+    }
+
+    const item = list[currentQrIndex];
+    const safeMethod = escapeHtml(item.method);
+    const hasImg = !!item.image;
+    const total = list.length;
+
+    container.innerHTML = `
         <div style="background: #ffffff; border: 1px solid #dcd0c2; border-radius: 6px; padding: 14px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); position: relative;">
-            <div style="font-family:'Special Elite', monospace; font-size: 14px; font-weight: bold; color: var(--maroon-dark); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
-                ${safeMethod}
+            
+            <!-- Header bar with Method Name and Index Counter -->
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 10px; border-bottom: 1px dashed #ebdcd0; padding-bottom: 6px;">
+                <span style="font-family:'Special Elite', monospace; font-size: 15px; font-weight: bold; color: var(--maroon-dark); text-transform: uppercase; letter-spacing: 0.5px;">
+                    ${safeMethod}
+                </span>
+                <span style="font-family:'Special Elite', monospace; font-size: 11px; color: #8c5b52; background: #faf4ee; padding: 2px 8px; border-radius: 10px; border: 1px solid #ebdcd0;">
+                    ${currentQrIndex + 1} of ${total}
+                </span>
             </div>
-            <div id="qr-img-wrap-${idx}" style="width: 140px; height: 140px; border: 1px dashed #dcd0c2; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #faf4ee; margin-bottom: 12px; cursor: pointer;" onclick="previewQrImage(${idx})" title="Click to view full size">
-                ${hasImg ? `<img src="${item.image}" alt="${safeMethod} QR" style="max-width: 100%; max-height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend','<span style=&quot;color:#a94442;font-size:11px;text-align:center;&quot;>QR failed to load.<br>Click Replace below.</span>');">` : `<span style="color:#8c5b52;font-size:11px;text-align:center;font-family:'Special Elite',monospace;">No image uploaded.<br>Click Replace below.</span>`}
+
+            <!-- Carousel Slider Stage: < Arrow, QR Image, > Arrow -->
+            <div style="display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; margin-bottom: 10px;">
+                ${total > 1 ? `
+                    <button type="button" class="btn-action btn-secondary" onclick="slidePaymentQr(-1)" title="Previous QR code" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; border-radius: 50%; cursor: pointer;">
+                        &#8249;
+                    </button>
+                ` : `<div style="width: 32px;"></div>`}
+
+                <div id="qr-img-wrap-${currentQrIndex}" style="width: 145px; height: 145px; border: 1px dashed #dcd0c2; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #faf4ee; cursor: pointer; transition: transform 0.2s;" onclick="previewQrImage(${currentQrIndex})" title="Click to view full size">
+                    ${hasImg ? `<img src="${item.image}" alt="${safeMethod} QR" style="max-width: 100%; max-height: 100%; object-fit: contain;">` : `<span style="color:#8c5b52;font-size:11px;text-align:center;font-family:'Special Elite',monospace;">No image uploaded.<br>Click Replace below.</span>`}
+                </div>
+
+                ${total > 1 ? `
+                    <button type="button" class="btn-action btn-secondary" onclick="slidePaymentQr(1)" title="Next QR code" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; border-radius: 50%; cursor: pointer;">
+                        &#8250;
+                    </button>
+                ` : `<div style="width: 32px;"></div>`}
             </div>
-            <div style="display: flex; gap: 6px; width: 100%;">
-                <label style="flex:1; text-align:center; padding: 6px 8px; font-size: 11px; background:#5a4a3a; color:#fff; border-radius:4px; cursor:pointer; font-family:'Special Elite',monospace;">
+
+            <!-- Method Selector Pills if more than 1 QR -->
+            ${total > 1 ? `
+                <div style="display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; justify-content: center;">
+                    ${list.map((q, qIdx) => `
+                        <button type="button" onclick="setPaymentQrIndex(${qIdx})" style="padding: 2px 8px; border-radius: 12px; font-size: 10.5px; font-family:'Special Elite', monospace; border: 1px solid ${qIdx === currentQrIndex ? 'var(--maroon)' : '#dcd0c2'}; background: ${qIdx === currentQrIndex ? 'var(--maroon)' : '#fdfaf6'}; color: ${qIdx === currentQrIndex ? '#fff' : '#6b4b45'}; cursor: pointer; transition: all 0.15s;">
+                            ${escapeHtml(q.method)}
+                        </button>
+                    `).join('')}
+                </div>
+            ` : ''}
+
+            <!-- Action buttons: Replace & Delete -->
+            <div style="display: flex; gap: 8px; width: 100%; max-width: 220px;">
+                <label style="flex:1; text-align:center; padding: 5px 8px; font-size: 11px; background:#5a4a3a; color:#fff; border-radius:4px; cursor:pointer; font-family:'Special Elite',monospace; display: inline-flex; align-items: center; justify-content: center;">
                     Replace
-                    <input type="file" accept="image/*" onchange="replaceQrImage(${idx}, this)" style="display:none;">
+                    <input type="file" accept="image/*" onchange="replaceQrImage(${currentQrIndex}, this)" style="display:none;">
                 </label>
-                <button type="button" class="btn-action btn-danger" onclick="deleteMultiPaymentQr(${idx})" style="flex:1; padding: 6px 8px; font-size: 11px;">
+                <button type="button" class="btn-action btn-danger" onclick="deleteMultiPaymentQr(${currentQrIndex})" style="flex:1; padding: 5px 8px; font-size: 11px;">
                     Delete QR
                 </button>
             </div>
-        </div>`;
-    }).join('');
+        </div>
+    `;
 }
 
 function getPaymentQrsList() {
@@ -4522,8 +4614,10 @@ async function handleSaveMultiPaymentQr() {
         const existingIdx = list.findIndex(q => q.method.toLowerCase() === method.toLowerCase());
         if (existingIdx !== -1) {
             list[existingIdx].image = optimizedImage;
+            currentQrIndex = existingIdx;
         } else {
             list.push({ id: 'qr-' + Date.now(), method, image: optimizedImage });
+            currentQrIndex = list.length - 1;
         }
 
         // Save directly via /api/admin-qr
@@ -4621,6 +4715,9 @@ async function deleteMultiPaymentQr(idx) {
 
     try {
         list.splice(idx, 1);
+        if (currentQrIndex >= list.length) {
+            currentQrIndex = Math.max(0, list.length - 1);
+        }
         await Storage.request('/api/admin-qr', {
             method: 'PUT',
             body: JSON.stringify({ paymentQrs: list })
