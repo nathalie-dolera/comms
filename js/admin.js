@@ -742,6 +742,18 @@ function saveViewTabAdminNote(id) {
     }
 }
 
+function saveViewTabProjectDescription(id) {
+    const desc = document.getElementById('view-tab-project-desc')?.value.trim() || '';
+    const list = Storage.get(Storage.KEYS.SUBMISSIONS, []);
+    const idx = list.findIndex(s => s.id === id);
+    if (idx !== -1) {
+        list[idx].description = desc;
+        Storage.set(Storage.KEYS.SUBMISSIONS, list);
+        showToast('Project description saved!');
+        switchToViewCommissionTab(id);
+    }
+}
+
 function setCommissionPaymentStatus(id, newStatus) {
     const subs = Storage.get(Storage.KEYS.SUBMISSIONS, []);
     const subIdx = subs.findIndex(s => s.id === id);
@@ -992,14 +1004,6 @@ function renderCommissionViewTab(sub) {
                 </button>
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                ${(!sub.status || sub.status === 'Pending') ? `
-                    <button class="btn-action" style="background:#2e7d32; color:#fff; font-weight:700;" onclick="acceptCommission('${sub.id}'); switchToViewCommissionTab('${sub.id}');">✓ Accept Commission</button>
-                ` : ''}
-                ${!isFullyPaid ? `
-                    <button class="btn-action" style="background:#15803d; color:#fff; font-weight:700;" onclick="setCommissionPaymentStatus('${sub.id}', 'fully_paid')">✓ Mark as Fully Paid</button>
-                ` : ''}
-                <button class="btn-action" style="background:#5a4a3a; color:#fff;" onclick="editSubmissionFromView('${sub.id}')">Edit Commission</button>
-                <button class="btn-action btn-secondary" onclick="recordPaymentFromCommission('${sub.id}')">+ Log Payment in Sheet</button>
                 <button class="btn-action btn-danger" onclick="deleteSubmission('${sub.id}'); switchBackToCommissionsList();">Delete</button>
             </div>
         </div>
@@ -1014,14 +1018,9 @@ function renderCommissionViewTab(sub) {
                     </h1>
                 </div>
                 <div>
-                    <select class="btn-status-select ${getStatusPillClass(sub.status)}" onchange="updateSubmissionStatus('${sub.id}', this.value); switchToViewCommissionTab('${sub.id}');" style="font-size: 13px; padding: 6px 14px; border-radius: 12px; font-weight: bold; cursor: pointer;">
-                        <option value="Pending" ${(!sub.status || sub.status === 'Pending') ? 'selected' : ''}>Pending</option>
-                        <option value="Accepted" ${sub.status === 'Accepted' ? 'selected' : ''}>Accepted</option>
-                        <option value="In Progress" ${sub.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
-                        <option value="Done" ${sub.status === 'Done' ? 'selected' : ''}>Done</option>
-                        <option value="Turned Over" ${sub.status === 'Turned Over' ? 'selected' : ''}>Turned Over</option>
-                        <option value="Declined" ${sub.status === 'Declined' ? 'selected' : ''}>Declined</option>
-                    </select>
+                    <span class="status-pill ${getStatusPillClass(sub.status)}" style="font-size: 13px; padding: 6px 14px; border-radius: 12px; font-weight: bold; font-family:'Special Elite', monospace;">
+                        ${escapeHtml(sub.status || 'Accepted')}
+                    </span>
                 </div>
             </div>
 
@@ -1038,17 +1037,10 @@ function renderCommissionViewTab(sub) {
                         <span class="payment-badge ${badgeClass}" style="font-size: 12px; padding: 5px 12px; font-weight: bold; border-radius: 12px;">${paymentLabel}</span>
                         <span style="font-size: 12px; font-weight: 600; color: #555;">via ${escapeHtml(sub.payment || 'GCash')}</span>
                     </div>
-                    ${!isFullyPaid ? `
-                        <div style="margin-top: 8px;">
-                            <button type="button" class="btn-action" style="background:#15803d; color:#fff; font-size: 11.5px; font-weight: 700; padding: 5px 12px; border-radius: 4px; cursor: pointer; width: 100%; border: none;" onclick="setCommissionPaymentStatus('${sub.id}', 'fully_paid')">
-                                ✓ Mark as Fully Paid
-                            </button>
+                    ${(agreedAmt > 0 && balAmt > 0) ? `
+                        <div style="font-size: 11.5px; color: #555; margin-top: 6px;">
+                            ₱${paidAmt.toLocaleString()} paid of ₱${agreedAmt.toLocaleString()} (₱${balAmt.toLocaleString()} due)
                         </div>
-                        ${(agreedAmt > 0 && balAmt > 0) ? `
-                            <div style="font-size: 11.5px; color: #555; margin-top: 6px;">
-                                ₱${paidAmt.toLocaleString()} paid of ₱${agreedAmt.toLocaleString()} (₱${balAmt.toLocaleString()} due)
-                            </div>
-                        ` : ''}
                     ` : ''}
                 </div>
 
@@ -1065,13 +1057,18 @@ function renderCommissionViewTab(sub) {
                 </div>
             </div>
 
-            <!-- PROJECT DESCRIPTION -->
+            <!-- PROJECT DESCRIPTION (Editable) -->
             <div style="margin-bottom: 22px;">
                 <label style="color: var(--maroon); font-weight: bold; font-family:'Special Elite', monospace; text-transform: uppercase; font-size: 12px; display: block; margin-bottom: 6px;">
                     Project Description
                 </label>
-                <div style="background: #ffffff; border: 1px solid #d4c4b0; border-radius: 6px; padding: 16px; font-size: 13.5px; line-height: 1.6; color: #2a1010; white-space: pre-wrap;">
-                    ${escapeHtml(sub.description || 'No description provided.')}
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <textarea id="view-tab-project-desc" rows="4" style="width: 100%; box-sizing: border-box; padding: 12px 14px; border: 1px solid #d4c4b0; border-radius: 6px; font-size: 13px; line-height: 1.6; color: #2a1010; font-family: inherit; background: #fff; resize: vertical;" placeholder="Enter project description...">${escapeHtml(sub.description || '')}</textarea>
+                    <div style="display: flex; justify-content: flex-end;">
+                        <button type="button" class="btn-action btn-primary" onclick="saveViewTabProjectDescription('${sub.id}')" style="padding: 6px 16px; font-size: 12px;">
+                            Save Description
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -1337,8 +1334,6 @@ function editSubmissionFromView(id) {
     if (!sub) return;
 
     const container = document.getElementById('modal-sub-content');
-    const services = Storage.get(Storage.KEYS.SERVICES, []);
-    const serviceOptions = services.map(s => `<option value="${escapeHtml(s.name)}" ${sub.service === s.name ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('');
 
     container.innerHTML = `
         <div style="margin-bottom: 14px; background: #fdf6ee; border: 1px dashed #c9a98a; border-radius: 6px; padding: 12px 14px;">
@@ -1347,33 +1342,8 @@ function editSubmissionFromView(id) {
         </div>
 
         <div class="admin-form-group">
-            <label>Status</label>
-            <select id="edit-sub-status">
-                <option value="Accepted" ${sub.status === 'Accepted' ? 'selected' : ''}>Accepted</option>
-                <option value="In Progress" ${sub.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
-                <option value="Done" ${sub.status === 'Done' ? 'selected' : ''}>Done</option>
-                <option value="Turned Over" ${sub.status === 'Turned Over' ? 'selected' : ''}>Turned Over</option>
-            </select>
-        </div>
-
-        <div class="admin-form-group">
-            <label>Service Type</label>
-            <input type="text" id="edit-sub-service" value="${escapeHtml(sub.service || '')}" placeholder="e.g. Digital Invitation">
-        </div>
-
-        <div class="admin-form-group">
-            <label>Agreed Project Price (₱)</label>
-            <input type="number" id="edit-sub-agreed-price" value="${sub.agreedPrice || ''}" placeholder="e.g. 500" min="0" step="any">
-        </div>
-
-        <div class="admin-form-group">
-            <label>Target Deadline</label>
-            <input type="date" id="edit-sub-deadline" value="${sub.deadline || ''}">
-        </div>
-
-        <div class="admin-form-group">
             <label>Project Description</label>
-            <textarea id="edit-sub-description" rows="3" style="width:100%; box-sizing:border-box;">${escapeHtml(sub.description || '')}</textarea>
+            <textarea id="edit-sub-description" rows="5" style="width:100%; box-sizing:border-box;">${escapeHtml(sub.description || '')}</textarea>
         </div>
 
         <div class="admin-form-group">
@@ -1382,7 +1352,7 @@ function editSubmissionFromView(id) {
         </div>
 
         <div style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;">
-            <button class="btn-action btn-secondary" onclick="viewSubmissionDetail('${sub.id}')">← Back</button>
+            <button class="btn-action btn-secondary" onclick="closeModal('modal-view-submission'); switchToViewCommissionTab('${sub.id}');">← Back</button>
             <button class="btn-action btn-primary" onclick="saveSubmissionEdits('${sub.id}')">Save Changes</button>
         </div>
     `;
@@ -1394,38 +1364,16 @@ function saveSubmissionEdits(id) {
     const idx = list.findIndex(s => s.id === id);
     if (idx === -1) return;
 
-    const newStatus = document.getElementById('edit-sub-status')?.value || list[idx].status;
-    const newService = document.getElementById('edit-sub-service')?.value.trim() || list[idx].service;
-    const newAgreed = parseFloat(document.getElementById('edit-sub-agreed-price')?.value) || 0;
-    const newDeadline = document.getElementById('edit-sub-deadline')?.value || list[idx].deadline;
     const newDescription = document.getElementById('edit-sub-description')?.value.trim() || list[idx].description;
     const newAdminNote = document.getElementById('edit-sub-admin-note')?.value.trim() || '';
 
-    list[idx].status = newStatus;
-    list[idx].service = newService;
-    list[idx].agreedPrice = newAgreed;
-    const curPaid = Number(list[idx].amountPaid) || 0;
-    list[idx].balance = Math.max(0, newAgreed - curPaid);
-    if (curPaid <= 0) {
-        list[idx].paymentType = 'unpaid';
-    } else if (newAgreed > 0 && curPaid >= newAgreed) {
-        list[idx].paymentType = 'fully_paid';
-    } else if (curPaid > 0) {
-        list[idx].paymentType = 'downpayment';
-    }
-    list[idx].deadline = newDeadline;
     list[idx].description = newDescription;
-    if (newStatus === 'Done' || newStatus === 'Turned Over') {
-        list[idx].adminNote = '';
-    } else {
-        list[idx].adminNote = newAdminNote;
-    }
+    list[idx].adminNote = newAdminNote;
 
     Storage.set(Storage.KEYS.SUBMISSIONS, list);
     showToast('Commission updated successfully!');
-    renderSubmissions();
-    renderCalendar();
-    viewSubmissionDetail(id); // return to view mode showing updated data
+    closeModal('modal-view-submission');
+    switchToViewCommissionTab(id);
 }
 
 function deleteSubmission(id) {
@@ -2713,6 +2661,7 @@ function deleteAboutSection(id) {
 }
 
 function saveAboutContent(showToastMsg = true) {
+    saveSiteBrandingSettings(false);
     const container = document.getElementById('about-sections-container');
     if (!container) return;
     const cards = container.querySelectorAll('.dynamic-edit-card');
