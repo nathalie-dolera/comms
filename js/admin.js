@@ -2775,13 +2775,20 @@ function saveSiteBrandingSettings(showToastMsg = true) {
 
 function syncHomepageImagePreview() {
     const settings = Storage.get(Storage.KEYS.SITE_SETTINGS, {}) || {};
-    const wrap = document.getElementById('homepage-image-preview-wrap');
+    const previewWrap = document.getElementById('homepage-image-preview-wrap');
+    const uploadWrap = document.getElementById('homepage-image-upload-wrap');
     const img = document.getElementById('homepage-image-preview');
+    const fileInput = document.getElementById('homepage-image-file');
+
     if (settings.homepageImage) {
         if (img) img.src = settings.homepageImage;
-        if (wrap) wrap.style.display = 'flex';
-    } else if (wrap) {
-        wrap.style.display = 'none';
+        if (previewWrap) previewWrap.style.display = 'flex';
+        if (uploadWrap) uploadWrap.style.display = 'none';
+    } else {
+        if (previewWrap) previewWrap.style.display = 'none';
+        if (uploadWrap) uploadWrap.style.display = 'flex';
+        if (img) img.src = '';
+        if (fileInput) fileInput.value = '';
     }
 }
 
